@@ -74,6 +74,8 @@ export const keysApi = {
     page_size: number;
     key_value?: string;
     status?: KeyStatus;
+    sort_by?: "weight" | "request_count" | "failure_count" | "last_used_at";
+    sort_order?: "asc" | "desc";
   }): Promise<{
     items: APIKey[];
     pagination: {
@@ -326,5 +328,11 @@ export const keysApi = {
   // 重置单个密钥权重为其基础权重
   async resetKeyWeight(keyId: number): Promise<void> {
     await http.post(`/keys/${keyId}/reset-weight`);
+  },
+
+  // 清空分组所有密钥的请求数和错误数
+  async clearRequestCount(groupId: number): Promise<{ updated_count: number }> {
+    const res = await http.post("/keys/clear-request-count", { group_id: groupId });
+    return res.data;
   },
 };

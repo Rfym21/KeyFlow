@@ -156,7 +156,14 @@ func (s *Server) ListKeysInGroup(c *gin.Context) {
 		searchHash = s.EncryptionSvc.Hash(searchKeyword)
 	}
 
-	query := s.KeyService.ListKeysInGroupQuery(groupID, statusFilter, searchHash)
+	// 排序参数
+	sortBy := c.Query("sort_by")
+	sortOrder := c.Query("sort_order")
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	query := s.KeyService.ListKeysInGroupQuery(groupID, statusFilter, searchHash, sortBy, sortOrder)
 
 	var keys []models.APIKey
 	paginatedResult, err := response.Paginate(c, query, &keys)
@@ -592,4 +599,26 @@ func (s *Server) ResetKeyWeight(c *gin.Context) {
 	}
 
 	response.Success(c, nil)
+}
+
+// ClearRequestCount handles clearing request_count and failure_count for all keys in a group.
+func (s *Server) ClearRequestCount(c *gin.Context) {
+	var req GroupIDRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidJSON, err.Error()))
+		return
+	}
+
+	if _, ok := s.findGroupByID(c, req.GroupID); !ok {
+		return
+	}
+
+	updatedCount, err := s.KeyService.ClearRequestCount(req.GroupID)
+	if err != nil {
+		logrus.WithError(err).WithField("groupID", req.GroupID).Error("Failed to clear request count")
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrDatabase, err.Error()))
+		return
+	}
+
+	response.Success(c, gin.H{"updated_count": updatedCount})
 }

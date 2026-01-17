@@ -372,7 +372,7 @@ func (s *KeyService) DeleteMultipleKeys(groupID uint, keysText string) (*DeleteK
 }
 
 // ListKeysInGroupQuery builds a query to list all keys within a specific group, filtered by status.
-func (s *KeyService) ListKeysInGroupQuery(groupID uint, statusFilter string, searchHash string) *gorm.DB {
+func (s *KeyService) ListKeysInGroupQuery(groupID uint, statusFilter string, searchHash string, sortBy string, sortOrder string) *gorm.DB {
 	query := s.DB.Model(&models.APIKey{}).Where("group_id = ?", groupID)
 
 	if statusFilter != "" {
@@ -383,7 +383,20 @@ func (s *KeyService) ListKeysInGroupQuery(groupID uint, statusFilter string, sea
 		query = query.Where("key_hash = ?", searchHash)
 	}
 
-	query = query.Order("last_used_at desc, updated_at desc")
+	// 根据排序字段排序
+	switch sortBy {
+	case "weight":
+		query = query.Order("weight " + sortOrder)
+	case "request_count":
+		query = query.Order("request_count " + sortOrder)
+	case "failure_count":
+		query = query.Order("failure_count " + sortOrder)
+	case "last_used_at":
+		query = query.Order("last_used_at " + sortOrder + " NULLS LAST")
+	default:
+		// 默认按最后使用时间排序
+		query = query.Order("last_used_at desc, updated_at desc")
+	}
 
 	return query
 }
@@ -513,4 +526,15 @@ func (s *KeyService) UpdateKeysWeight(groupID uint, keysText string, weight int)
 // ResetKeysWeight resets all keys' weights in a group to the default value (500)
 func (s *KeyService) ResetKeysWeight(groupID uint) (int64, error) {
 	return s.KeyProvider.ResetKeysWeight(groupID)
+}
+
+// ClearRequestCount clears request_count and failure_count for all keys in a group
+func (s *KeyService) ClearRequestCount(groupID uint) (int64, error) {
+	result := s.DB.Model(&models.APIKey{}).
+		Where("group_id = ?", groupID).
+		Updates(map[string]any{
+			"request_count": 0,
+			"failure_count": 0,
+		})
+	return result.RowsAffected, result.Error
 }

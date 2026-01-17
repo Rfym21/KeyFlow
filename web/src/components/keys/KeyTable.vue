@@ -16,6 +16,7 @@ import {
   RemoveCircleOutline,
   ScaleOutline,
   Search,
+  SwapVerticalOutline,
 } from "@vicons/ionicons5";
 import {
   NButton,
@@ -26,7 +27,6 @@ import {
   NInputNumber,
   NModal,
   NSelect,
-  NSpace,
   NSpin,
   useDialog,
   type MessageReactive,
@@ -64,6 +64,18 @@ const statusOptions = [
   { label: t("common.all"), value: "all" },
   { label: t("keys.valid"), value: "active" },
   { label: t("keys.invalid"), value: "invalid" },
+];
+
+// 排序选项
+type SortField = "last_used_at" | "weight" | "request_count" | "failure_count";
+const sortBy = ref<SortField>("last_used_at");
+const sortOrder = ref<"asc" | "desc">("desc");
+
+const sortOptions = [
+  { label: t("keys.sortByLastUsed"), value: "last_used_at" },
+  { label: t("keys.sortByWeight"), value: "weight" },
+  { label: t("keys.sortByRequests"), value: "request_count" },
+  { label: t("keys.sortByFailures"), value: "failure_count" },
 ];
 
 // 更多操作下拉菜单选项
@@ -126,6 +138,15 @@ watch([currentPage, pageSize], async () => {
 });
 
 watch(statusFilter, async () => {
+  if (currentPage.value !== 1) {
+    currentPage.value = 1;
+  } else {
+    await loadKeys();
+  }
+});
+
+// 监听排序变化
+watch([sortBy, sortOrder], async () => {
   if (currentPage.value !== 1) {
     currentPage.value = 1;
   } else {
@@ -210,6 +231,8 @@ async function loadKeys() {
       page_size: pageSize.value,
       status: statusFilter.value === "all" ? undefined : (statusFilter.value as KeyStatus),
       key_value: searchText.value.trim() || undefined,
+      sort_by: sortBy.value,
+      sort_order: sortOrder.value,
     });
     keys.value = result.items as KeyRow[];
     total.value = result.pagination.total_items;
@@ -610,6 +633,32 @@ async function resetKeysWeight() {
   });
 }
 
+async function clearRequestCount() {
+  if (!props.selectedGroup?.id) {
+    return;
+  }
+
+  dialog.warning({
+    title: t("keys.clearRequestCount"),
+    content: t("keys.confirmClearRequestCount"),
+    positiveText: t("common.confirm"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: async () => {
+      if (!props.selectedGroup?.id) {
+        return;
+      }
+
+      try {
+        const result = await keysApi.clearRequestCount(props.selectedGroup.id);
+        window.$message.success(t("keys.clearRequestCountSuccess", { count: result.updated_count }));
+        await loadKeys();
+      } catch (_error) {
+        console.error("Clear request count failed");
+      }
+    },
+  });
+}
+
 async function clearAll() {
   if (!props.selectedGroup?.id || isDeling.value) {
     return;
@@ -684,6 +733,12 @@ function resetPage() {
   currentPage.value = 1;
   searchText.value = "";
   statusFilter.value = "all";
+  sortBy.value = "last_used_at";
+  sortOrder.value = "desc";
+}
+
+function toggleSortOrder() {
+  sortOrder.value = sortOrder.value === "desc" ? "asc" : "desc";
 }
 </script>
 
@@ -691,7 +746,7 @@ function resetPage() {
   <div class="key-table-container">
     <!-- 工具栏 -->
     <div class="toolbar">
-      <div class="toolbar-left">
+      <div class="toolbar-row">
         <n-button type="success" size="small" @click="createDialogShow = true">
           <template #icon>
             <n-icon :component="AddCircleOutline" />
@@ -710,47 +765,67 @@ function resetPage() {
           </template>
           {{ t("keys.resetWeight") }}
         </n-button>
+        <n-button type="info" size="small" @click="clearRequestCount">
+          <template #icon>
+            <n-icon :component="RefreshOutline" />
+          </template>
+          {{ t("keys.clearRequestCount") }}
+        </n-button>
+        <n-dropdown :options="moreOptions" trigger="click" @select="handleMoreAction">
+          <n-button size="small" tertiary>
+            <template #icon>
+              <span style="font-size: 16px; font-weight: bold">⋯</span>
+            </template>
+          </n-button>
+        </n-dropdown>
       </div>
-      <div class="toolbar-right">
-        <n-space :size="12" align="center">
-          <n-select
-            v-model:value="statusFilter"
-            :options="statusOptions"
-            size="small"
-            style="width: 120px"
-            :placeholder="t('keys.allStatus')"
-          />
-          <n-input-group>
-            <n-input
-              v-model:value="searchText"
-              :placeholder="t('keys.keyExactMatch')"
-              size="small"
-              style="width: 200px"
-              clearable
-              @keyup.enter="handleSearchInput"
-            >
-              <template #prefix>
-                <n-icon :component="Search" />
-              </template>
-            </n-input>
-            <n-button
-              type="primary"
-              ghost
-              size="small"
-              :disabled="loading"
-              @click="handleSearchInput"
-            >
-              {{ t("common.search") }}
-            </n-button>
-          </n-input-group>
-          <n-dropdown :options="moreOptions" trigger="click" @select="handleMoreAction">
-            <n-button size="small" tertiary>
-              <template #icon>
-                <span style="font-size: 16px; font-weight: bold">⋯</span>
-              </template>
-            </n-button>
-          </n-dropdown>
-        </n-space>
+      <div class="toolbar-row">
+        <n-select
+          v-model:value="statusFilter"
+          :options="statusOptions"
+          size="small"
+          style="width: 100px"
+          :placeholder="t('keys.allStatus')"
+        />
+        <n-select
+          v-model:value="sortBy"
+          :options="sortOptions"
+          size="small"
+          style="width: 110px"
+        />
+        <n-button
+          size="small"
+          @click="toggleSortOrder"
+          :title="sortOrder === 'desc' ? t('keys.sortDesc') : t('keys.sortAsc')"
+        >
+          <template #icon>
+            <n-icon
+              :component="SwapVerticalOutline"
+              :style="{ transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none' }"
+            />
+          </template>
+        </n-button>
+        <n-input
+          v-model:value="searchText"
+          :placeholder="t('keys.keyExactMatch')"
+          size="small"
+          style="width: 180px"
+          clearable
+          @keyup.enter="handleSearchInput"
+        >
+          <template #prefix>
+            <n-icon :component="Search" />
+          </template>
+        </n-input>
+        <n-button
+          type="primary"
+          ghost
+          size="small"
+          :disabled="loading"
+          @click="handleSearchInput"
+        >
+          {{ t("common.search") }}
+        </n-button>
       </div>
     </div>
 
@@ -835,7 +910,7 @@ function resetPage() {
                   {{ t("keys.failuresShort") }}
                   <strong>{{ key.failure_count }}</strong>
                 </span>
-                <span class="stat-item" :title="t('keys.weightTip')">
+                <span class="stat-item weight-stat" :title="t('keys.weightTip')">
                   {{ t("keys.weightShort") }}
                   <strong>{{ key.weight || 500 }}</strong>
                 </span>
@@ -991,33 +1066,24 @@ function resetPage() {
 
 .toolbar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   padding: 16px;
   background: var(--card-bg-solid);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  gap: 16px;
-  min-height: 64px;
+}
+
+.toolbar-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .toolbar :deep(.n-button) {
   font-weight: 500;
-}
-
-.toolbar-left {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.toolbar-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex: 1;
-  justify-content: flex-end;
-  min-width: 0;
 }
 
 .filter-group {
@@ -1243,6 +1309,14 @@ function resetPage() {
   color: #d03050;
 }
 
+.weight-stat {
+  color: #d4a017;
+}
+
+.weight-stat strong {
+  color: #d4a017;
+}
+
 .time-stat {
   margin-left: auto;
 }
@@ -1398,21 +1472,9 @@ function resetPage() {
 }
 
 @media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .toolbar-left,
-  .toolbar-right {
+  .toolbar-row {
     width: 100%;
-    justify-content: space-between;
-  }
-
-  .toolbar-right .n-space {
-    width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
   }
 }
 </style>
