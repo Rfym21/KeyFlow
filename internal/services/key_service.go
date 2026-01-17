@@ -255,9 +255,9 @@ func (s *KeyService) parseKeyWithWeight(input string) *KeyWithWeight {
 		}
 	}
 
-	// 没有权重后缀，使用默认权重 100
+	// 没有权重后缀，使用默认权重 500
 	if s.isValidKeyFormat(input) {
-		return &KeyWithWeight{Key: input, Weight: 100}
+		return &KeyWithWeight{Key: input, Weight: 500}
 	}
 
 	return nil
