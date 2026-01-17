@@ -70,12 +70,31 @@ func (s *CronChecker) runLoop() {
 
 	s.submitValidationJobs()
 
-	ticker := time.NewTicker(5 * time.Minute)
+	// 获取配置的检查间隔，最小1分钟
+	settings := s.SettingsManager.GetSettings()
+	intervalMinutes := settings.KeyValidationCheckIntervalMinutes
+	if intervalMinutes < 1 {
+		intervalMinutes = 1
+	}
+	ticker := time.NewTicker(time.Duration(intervalMinutes) * time.Minute)
 	defer ticker.Stop()
+
+	logrus.Infof("CronChecker: Started with check interval %d minutes", intervalMinutes)
 
 	for {
 		select {
 		case <-ticker.C:
+			// 每次检查时重新获取配置，支持动态调整
+			newSettings := s.SettingsManager.GetSettings()
+			newInterval := newSettings.KeyValidationCheckIntervalMinutes
+			if newInterval < 1 {
+				newInterval = 1
+			}
+			if newInterval != intervalMinutes {
+				intervalMinutes = newInterval
+				ticker.Reset(time.Duration(intervalMinutes) * time.Minute)
+				logrus.Infof("CronChecker: Check interval changed to %d minutes", intervalMinutes)
+			}
 			logrus.Debug("CronChecker: Running as Master, submitting validation jobs.")
 			s.submitValidationJobs()
 		case <-s.stopChan:

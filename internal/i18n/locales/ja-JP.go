@@ -161,6 +161,8 @@ var MessagesJaJP = map[string]string{
 	"config.blacklist_threshold_desc":           "キーがブラックリストに入るまでの失敗回数、0でブラックリスト無効。",
 	"config.blacklist_consecutive_mode":         "連続エラーモード",
 	"config.blacklist_consecutive_mode_desc":    "有効にすると連続エラーのみカウントし、成功時にエラーカウントをリセット。無効にするとすべてのエラーを累積。",
+	"config.key_validation_check_interval":      "キーチェック間隔（分）",
+	"config.key_validation_check_interval_desc": "どのグループが検証を必要とするかをチェックする間隔（分）。グループ検証間隔が正しく機能するように短く設定してください。",
 	"config.key_validation_interval":            "キー検証間隔（分）",
 	"config.key_validation_interval_desc":       "バックグラウンドキー検証のデフォルト間隔（分）。",
 	"config.key_validation_concurrency":         "キー検証並行数",

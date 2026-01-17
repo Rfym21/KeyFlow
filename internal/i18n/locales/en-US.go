@@ -161,6 +161,8 @@ var MessagesEnUS = map[string]string{
 	"config.blacklist_threshold_desc":           "Number of failures before a key is blacklisted, 0 to disable blacklisting.",
 	"config.blacklist_consecutive_mode":         "Consecutive Error Mode",
 	"config.blacklist_consecutive_mode_desc":    "When enabled, only consecutive errors are counted and successful requests reset the error count; when disabled, all errors are accumulated.",
+	"config.key_validation_check_interval":      "Key Check Interval (minutes)",
+	"config.key_validation_check_interval_desc": "Interval (minutes) for checking which groups need validation. Set shorter to ensure group validation intervals work correctly.",
 	"config.key_validation_interval":            "Key Validation Interval (minutes)",
 	"config.key_validation_interval_desc":       "Default interval (minutes) for background key validation.",
 	"config.key_validation_concurrency":         "Key Validation Concurrency",

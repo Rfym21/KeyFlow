@@ -161,6 +161,8 @@ var MessagesZhCN = map[string]string{
 	"config.blacklist_threshold_desc":           "一个 Key 失败多少次后进入黑名单，0为不拉黑。",
 	"config.blacklist_consecutive_mode":         "连续错误模式",
 	"config.blacklist_consecutive_mode_desc":    "开启后只计算连续错误次数，请求成功会重置错误计数；关闭则累计所有错误次数。",
+	"config.key_validation_check_interval":      "密钥检查间隔（分钟）",
+	"config.key_validation_check_interval_desc": "定时检查哪些分组需要验证的间隔（分钟），建议设置较短以确保分组验证间隔生效。",
 	"config.key_validation_interval":            "密钥验证间隔（分钟）",
 	"config.key_validation_interval_desc":       "后台验证密钥的默认间隔（分钟）。",
 	"config.key_validation_concurrency":         "密钥验证并发数",
