@@ -441,6 +441,9 @@ export default {
     clearRequestCount: "カウントクリア",
     confirmClearRequestCount: "このグループのすべてのキーのリクエスト数とエラー数をクリアしますか？",
     clearRequestCountSuccess: "{count} 件のキーのカウントをクリアしました",
+    clearKeyStats: "統計クリア",
+    clearStatsShort: "クリア",
+    keyStatsCleared: "キー統計がクリアされました",
   },
   subGroups: {
     addSubGroup: "サブグループを追加",

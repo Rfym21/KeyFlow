@@ -441,6 +441,9 @@ export default {
     clearRequestCount: "Clear Counts",
     confirmClearRequestCount: "Are you sure you want to clear request and failure counts for all keys in this group?",
     clearRequestCountSuccess: "Cleared counts for {count} keys",
+    clearKeyStats: "Clear Stats",
+    clearStatsShort: "Clear",
+    keyStatsCleared: "Key stats cleared",
   },
   subGroups: {
     addSubGroup: "Add Sub Group",

@@ -425,6 +425,9 @@ export default {
     clearRequestCount: "清空请求数",
     confirmClearRequestCount: "确定要清空该分组所有密钥的请求数和错误数吗？",
     clearRequestCountSuccess: "已清空 {count} 个密钥的请求数",
+    clearKeyStats: "清除统计",
+    clearStatsShort: "清除",
+    keyStatsCleared: "密钥统计已清除",
   },
   subGroups: {
     addSubGroup: "添加子分组",

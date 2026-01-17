@@ -387,6 +387,17 @@ async function resetKeyWeight(key: KeyRow) {
   }
 }
 
+// 清除单个密钥统计
+async function clearKeyStats(key: KeyRow) {
+  try {
+    await keysApi.clearKeyStats(key.id);
+    window.$message.success(t("keys.keyStatsCleared"));
+    await loadKeys();
+  } catch (error) {
+    console.error("Clear key stats failed", error);
+  }
+}
+
 async function restoreKey(key: KeyRow) {
   if (!props.selectedGroup?.id || !key.key_value || isRestoring.value) {
     return;
@@ -923,7 +934,7 @@ function toggleSortOrder() {
                 <n-button
                   round
                   tertiary
-                  type="info"
+                  type="success"
                   size="tiny"
                   @click="testKey(key)"
                   :title="t('keys.testKey')"
@@ -933,11 +944,22 @@ function toggleSortOrder() {
                 <n-button
                   round
                   tertiary
+                  type="warning"
                   size="tiny"
                   @click="resetKeyWeight(key)"
                   :title="t('keys.resetKeyWeight')"
                 >
                   {{ t("keys.resetWeightShort") }}
+                </n-button>
+                <n-button
+                  round
+                  tertiary
+                  type="info"
+                  size="tiny"
+                  @click="clearKeyStats(key)"
+                  :title="t('keys.clearKeyStats')"
+                >
+                  {{ t("keys.clearStatsShort") }}
                 </n-button>
                 <n-button
                   v-if="key.status !== 'active'"
@@ -1289,6 +1311,7 @@ function toggleSortOrder() {
   gap: 6px;
   margin-top: 4px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .stat-item {

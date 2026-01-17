@@ -335,4 +335,9 @@ export const keysApi = {
     const res = await http.post("/keys/clear-request-count", { group_id: groupId });
     return res.data;
   },
+
+  // 清除单个密钥的统计数据
+  async clearKeyStats(keyId: number): Promise<void> {
+    await http.post(`/keys/${keyId}/clear-stats`);
+  },
 };

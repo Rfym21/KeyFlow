@@ -622,3 +622,20 @@ func (s *Server) ClearRequestCount(c *gin.Context) {
 
 	response.Success(c, gin.H{"updated_count": updatedCount})
 }
+
+// ClearKeyStats handles clearing request_count and failure_count for a single key.
+func (s *Server) ClearKeyStats(c *gin.Context) {
+	keyID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || keyID <= 0 {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrBadRequest, "invalid key ID"))
+		return
+	}
+
+	if err := s.KeyService.ClearKeyStats(uint(keyID)); err != nil {
+		logrus.WithError(err).WithField("keyID", keyID).Error("Failed to clear key stats")
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrDatabase, err.Error()))
+		return
+	}
+
+	response.Success(c, nil)
+}

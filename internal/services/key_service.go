@@ -538,3 +538,13 @@ func (s *KeyService) ClearRequestCount(groupID uint) (int64, error) {
 		})
 	return result.RowsAffected, result.Error
 }
+
+// ClearKeyStats clears request_count and failure_count for a single key
+func (s *KeyService) ClearKeyStats(keyID uint) error {
+	return s.DB.Model(&models.APIKey{}).
+		Where("id = ?", keyID).
+		Updates(map[string]any{
+			"request_count": 0,
+			"failure_count": 0,
+		}).Error
+}
