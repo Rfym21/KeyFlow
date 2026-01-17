@@ -73,7 +73,7 @@ func NewKeyService(db *gorm.DB, keyProvider *keypool.KeyProvider, keyValidator *
 }
 
 // AddMultipleKeys handles the business logic of creating new keys from a text block.
-// Supports format: key:weight (e.g., "sk-xxx:10") or just key (default weight 100)
+// Supports format: key:weight (e.g., "sk-xxx:10") or just key (default weight 500)
 // deprecated: use KeyImportService for large imports
 func (s *KeyService) AddMultipleKeys(groupID uint, keysText string) (*AddKeysResult, error) {
 	keysWithWeight := s.ParseKeysWithWeightFromText(keysText)
@@ -109,7 +109,7 @@ func (s *KeyService) processAndCreateKeys(
 ) (addedCount int, ignoredCount int, err error) {
 	keysWithWeight := make([]KeyWithWeight, len(keys))
 	for i, k := range keys {
-		keysWithWeight[i] = KeyWithWeight{Key: k, Weight: 1}
+		keysWithWeight[i] = KeyWithWeight{Key: k, Weight: 500}
 	}
 	return s.processAndCreateKeysWithWeight(groupID, keysWithWeight, progressCallback)
 }
@@ -154,9 +154,9 @@ func (s *KeyService) processAndCreateKeysWithWeight(
 
 		weight := kw.Weight
 		if weight < 1 {
-			weight = 100
+		weight = 500
 		} else if weight > 1000 {
-			weight = 1000
+		weight = 5000
 		}
 
 		uniqueNewKeys[trimmedKey] = true
@@ -205,7 +205,7 @@ func (s *KeyService) ParseKeysFromText(text string) []string {
 }
 
 // ParseKeysWithWeightFromText parses a string of keys with optional weights.
-// Supports format: key:weight (e.g., "sk-xxx:10") or just key (default weight 100)
+// Supports format: key:weight (e.g., "sk-xxx:10") or just key (default weight 500)
 func (s *KeyService) ParseKeysWithWeightFromText(text string) []KeyWithWeight {
 	var result []KeyWithWeight
 
@@ -388,6 +388,15 @@ func (s *KeyService) ListKeysInGroupQuery(groupID uint, statusFilter string, sea
 	return query
 }
 
+// EnrichKeysWithRealTimeWeight 用store中的实时权重更新keys
+func (s *KeyService) EnrichKeysWithRealTimeWeight(keys []models.APIKey) {
+	for i := range keys {
+		if weight := s.KeyProvider.GetRealTimeWeight(keys[i].ID); weight > 0 {
+			keys[i].Weight = weight
+		}
+	}
+}
+
 // TestMultipleKeys handles a one-off validation test for multiple keys.
 func (s *KeyService) TestMultipleKeys(group *models.Group, keysText string) ([]keypool.KeyTestResult, error) {
 	keysToTest := s.ParseKeysFromText(keysText)
@@ -499,4 +508,9 @@ func (s *KeyService) UpdateKeysWeight(groupID uint, keysText string, weight int)
 		IgnoredCount: ignoredCount,
 		TotalInGroup: totalInGroup,
 	}, nil
+}
+
+// ResetKeysWeight resets all keys' weights in a group to the default value (500)
+func (s *KeyService) ResetKeysWeight(groupID uint) (int64, error) {
+	return s.KeyProvider.ResetKeysWeight(groupID)
 }

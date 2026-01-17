@@ -175,6 +175,10 @@ func (s *Server) ListKeysInGroup(c *gin.Context) {
 			keys[i].KeyValue = decryptedValue
 		}
 	}
+
+	// 用store中的实时权重更新keys
+	s.KeyService.EnrichKeysWithRealTimeWeight(keys)
+
 	paginatedResult.Items = keys
 
 	response.Success(c, paginatedResult)
@@ -549,4 +553,43 @@ func (s *Server) UpdateKeysWeight(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+// ResetGroupKeysWeight handles resetting all keys' weights in a group to default.
+func (s *Server) ResetGroupKeysWeight(c *gin.Context) {
+	var req GroupIDRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidJSON, err.Error()))
+		return
+	}
+
+	if _, ok := s.findGroupByID(c, req.GroupID); !ok {
+		return
+	}
+
+	updatedCount, err := s.KeyService.ResetKeysWeight(req.GroupID)
+	if err != nil {
+		logrus.WithError(err).WithField("groupID", req.GroupID).Error("Failed to reset keys weight")
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrDatabase, err.Error()))
+		return
+	}
+
+	response.Success(c, gin.H{"updated_count": updatedCount})
+}
+
+// ResetKeyWeight handles resetting a single key's weight to its base weight.
+func (s *Server) ResetKeyWeight(c *gin.Context) {
+	keyID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || keyID <= 0 {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrBadRequest, "invalid key ID"))
+		return
+	}
+
+	if err := s.KeyService.KeyProvider.ResetSingleKeyWeight(uint(keyID)); err != nil {
+		logrus.WithError(err).WithField("keyID", keyID).Error("Failed to reset key weight")
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrDatabase, err.Error()))
+		return
+	}
+
+	response.Success(c, nil)
 }

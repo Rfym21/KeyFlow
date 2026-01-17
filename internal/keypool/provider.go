@@ -99,7 +99,7 @@ func (p *KeyProvider) SelectKey(groupID uint) (*models.APIKey, error) {
 	if err == nil {
 		w, _ := strconv.Atoi(firstDetails["weight"])
 		if w <= 0 {
-			w = 100
+			w = 500
 		}
 		keys = append(keys, keyWeight{id: firstKeyID, weight: w})
 		totalWeight += w
@@ -120,7 +120,7 @@ func (p *KeyProvider) SelectKey(groupID uint) (*models.APIKey, error) {
 		if err == nil {
 			w, _ := strconv.Atoi(details["weight"])
 			if w <= 0 {
-				w = 100
+				w = 500
 			}
 			keys = append(keys, keyWeight{id: nextKeyID, weight: w})
 			totalWeight += w
@@ -176,9 +176,13 @@ func (p *KeyProvider) getKeyDetails(groupID uint, keyID uint64) (*models.APIKey,
 
 	failureCount, _ := strconv.ParseInt(keyDetails["failure_count"], 10, 64)
 	createdAt, _ := strconv.ParseInt(keyDetails["created_at"], 10, 64)
+	baseWeight, _ := strconv.Atoi(keyDetails["base_weight"])
+	if baseWeight <= 0 {
+		baseWeight = 500
+	}
 	weight, _ := strconv.Atoi(keyDetails["weight"])
 	if weight <= 0 {
-		weight = 100
+		weight = baseWeight
 	}
 
 	// Decrypt the key value for use by channels
@@ -196,6 +200,7 @@ func (p *KeyProvider) getKeyDetails(groupID uint, keyID uint64) (*models.APIKey,
 		ID:           uint(keyID),
 		KeyValue:     decryptedKeyValue,
 		Status:       keyDetails["status"],
+		BaseWeight:   baseWeight,
 		Weight:       weight,
 		FailureCount: failureCount,
 		GroupID:      groupID,
@@ -717,14 +722,19 @@ func (p *KeyProvider) removeKeyFromStore(keyID, groupID uint) error {
 
 // apiKeyToMap converts an APIKey model to a map for HSET.
 func (p *KeyProvider) apiKeyToMap(key *models.APIKey) map[string]any {
+	baseWeight := key.BaseWeight
+	if baseWeight <= 0 {
+		baseWeight = 500
+	}
 	weight := key.Weight
 	if weight <= 0 {
-		weight = 100
+		weight = baseWeight
 	}
 	return map[string]any{
 		"id":            fmt.Sprint(key.ID),
 		"key_string":    key.KeyValue,
 		"status":        key.Status,
+		"base_weight":   baseWeight,
 		"weight":        weight,
 		"failure_count": key.FailureCount,
 		"group_id":      key.GroupID,
@@ -741,7 +751,7 @@ func pluckIDs(keys []models.APIKey) []uint {
 	return ids
 }
 
-// UpdateKeyWeight 更新单个密钥的权重
+// UpdateKeyWeight 更新单个密钥的权重（同时更新base_weight和weight，并清除缓存命中记录）
 func (p *KeyProvider) UpdateKeyWeight(keyID uint, weight int) error {
 	if weight < 1 || weight > 1000 {
 		return fmt.Errorf("weight must be between 1 and 1000")
@@ -753,20 +763,30 @@ func (p *KeyProvider) UpdateKeyWeight(keyID uint, weight int) error {
 			return fmt.Errorf("failed to find key %d: %w", keyID, err)
 		}
 
-		if err := tx.Model(&key).Update("weight", weight).Error; err != nil {
+		// 同时更新 base_weight 和 weight
+		if err := tx.Model(&key).Updates(map[string]any{
+			"base_weight": weight,
+			"weight":      weight,
+		}).Error; err != nil {
 			return fmt.Errorf("failed to update key weight in DB: %w", err)
 		}
 
 		keyHashKey := fmt.Sprintf("key:%d", keyID)
-		if err := p.store.HSet(keyHashKey, map[string]any{"weight": weight}); err != nil {
+		if err := p.store.HSet(keyHashKey, map[string]any{
+			"base_weight": weight,
+			"weight":      weight,
+		}); err != nil {
 			return fmt.Errorf("failed to update key weight in store: %w", err)
 		}
+
+		// 清除该key的缓存命中记录
+		p.clearCacheHitRecordsForKey(keyID)
 
 		return nil
 	})
 }
 
-// UpdateKeysWeight 批量更新密钥的权重
+// UpdateKeysWeight 批量更新密钥的权重（同时更新base_weight和weight，并清除缓存命中记录）
 func (p *KeyProvider) UpdateKeysWeight(groupID uint, keyHashes []string, weight int) (int64, error) {
 	if weight < 1 || weight > 1000 {
 		return 0, fmt.Errorf("weight must be between 1 and 1000")
@@ -788,9 +808,13 @@ func (p *KeyProvider) UpdateKeysWeight(groupID uint, keyHashes []string, weight 
 			return nil
 		}
 
+		// 同时更新 base_weight 和 weight
 		result := tx.Model(&models.APIKey{}).
 			Where("group_id = ? AND key_hash IN ?", groupID, keyHashes).
-			Update("weight", weight)
+			Updates(map[string]any{
+				"base_weight": weight,
+				"weight":      weight,
+			})
 
 		if result.Error != nil {
 			return fmt.Errorf("failed to update keys weight in DB: %w", result.Error)
@@ -798,21 +822,105 @@ func (p *KeyProvider) UpdateKeysWeight(groupID uint, keyHashes []string, weight 
 
 		updatedCount = result.RowsAffected
 
-		// 更新缓存
+		// 更新缓存并清除缓存命中记录
 		for _, key := range keys {
 			keyHashKey := fmt.Sprintf("key:%d", key.ID)
-			if err := p.store.HSet(keyHashKey, map[string]any{"weight": weight}); err != nil {
+			if err := p.store.HSet(keyHashKey, map[string]any{
+				"base_weight": weight,
+				"weight":      weight,
+			}); err != nil {
 				logrus.WithFields(logrus.Fields{
 					"keyID": key.ID,
 					"error": err,
 				}).Error("Failed to update key weight in store")
 			}
+			// 清除该key的缓存命中记录
+			p.clearCacheHitRecordsForKey(key.ID)
 		}
 
 		return nil
 	})
 
 	return updatedCount, err
+}
+
+// ResetKeysWeight resets all keys' weights in a group to the default value (500)
+// This also resets base_weight and clears cache hit records
+func (p *KeyProvider) ResetKeysWeight(groupID uint) (int64, error) {
+	const defaultWeight = 500
+	var updatedCount int64
+
+	err := p.executeTransactionWithRetry(func(tx *gorm.DB) error {
+		// 同时重置 base_weight 和 weight
+		result := tx.Model(&models.APIKey{}).
+			Where("group_id = ?", groupID).
+			Updates(map[string]any{
+				"base_weight": defaultWeight,
+				"weight":      defaultWeight,
+			})
+
+		if result.Error != nil {
+			return fmt.Errorf("failed to reset keys weight in DB: %w", result.Error)
+		}
+
+		updatedCount = result.RowsAffected
+
+		// 更新store中的权重并清除缓存命中记录
+		var keys []models.APIKey
+		if err := tx.Select("id").Where("group_id = ?", groupID).Find(&keys).Error; err != nil {
+			return fmt.Errorf("failed to fetch keys for store update: %w", err)
+		}
+
+		for _, key := range keys {
+			keyHashKey := fmt.Sprintf("key:%d", key.ID)
+			if err := p.store.HSet(keyHashKey, map[string]any{
+				"base_weight": defaultWeight,
+				"weight":      defaultWeight,
+			}); err != nil {
+				logrus.WithFields(logrus.Fields{
+					"keyID": key.ID,
+					"error": err,
+				}).Error("Failed to reset key weight in store")
+			}
+			// 清除该key的缓存命中记录
+			p.clearCacheHitRecordsForKey(key.ID)
+		}
+
+		return nil
+	})
+
+	return updatedCount, err
+}
+
+// ResetSingleKeyWeight resets a single key's weight to its base_weight
+func (p *KeyProvider) ResetSingleKeyWeight(keyID uint) error {
+	return p.executeTransactionWithRetry(func(tx *gorm.DB) error {
+		var key models.APIKey
+		if err := tx.First(&key, keyID).Error; err != nil {
+			return fmt.Errorf("failed to find key %d: %w", keyID, err)
+		}
+
+		baseWeight := key.BaseWeight
+		if baseWeight <= 0 {
+			baseWeight = 500
+		}
+
+		// 更新数据库中的weight为base_weight
+		if err := tx.Model(&key).Update("weight", baseWeight).Error; err != nil {
+			return fmt.Errorf("failed to reset key weight in DB: %w", err)
+		}
+
+		// 更新store中的weight
+		keyHashKey := fmt.Sprintf("key:%d", keyID)
+		if err := p.store.HSet(keyHashKey, map[string]any{"weight": baseWeight}); err != nil {
+			return fmt.Errorf("failed to reset key weight in store: %w", err)
+		}
+
+		// 清除该key的缓存命中记录
+		p.clearCacheHitRecordsForKey(keyID)
+
+		return nil
+	})
 }
 
 // SelectKeyWithCacheHit 支持缓存命中的key选择
@@ -927,6 +1035,30 @@ func (p *KeyProvider) removeCacheHitRecord(cacheKey string) {
 	p.cacheHitMu.Unlock()
 }
 
+// clearCacheHitRecordsForKey 清除指定key的所有缓存命中记录
+func (p *KeyProvider) clearCacheHitRecordsForKey(keyID uint) {
+	p.cacheHitMu.Lock()
+	var keysToDelete []string
+	for cacheKey, record := range p.cacheHitRecords {
+		if record.KeyID == keyID {
+			keysToDelete = append(keysToDelete, cacheKey)
+		}
+	}
+	for _, cacheKey := range keysToDelete {
+		delete(p.cacheHitRecords, cacheKey)
+		// 从store中删除
+		p.store.Delete(cacheKey)
+	}
+	p.cacheHitMu.Unlock()
+
+	if len(keysToDelete) > 0 {
+		logrus.WithFields(logrus.Fields{
+			"keyID": keyID,
+			"count": len(keysToDelete),
+		}).Debug("Cache hit enhancement: cleared cache hit records for key")
+	}
+}
+
 // scheduleHashDeletion 延迟5分钟删除hash并恢复权重
 func (p *KeyProvider) scheduleHashDeletion(groupID uint, hash string, keyID uint) {
 	go func() {
@@ -944,7 +1076,7 @@ func (p *KeyProvider) scheduleHashDeletion(groupID uint, hash string, keyID uint
 	}()
 }
 
-// AdjustKeyWeightAsync 异步调整权重
+// AdjustKeyWeightAsync 异步调整权重，上限为 base_weight
 func (p *KeyProvider) AdjustKeyWeightAsync(keyID uint, delta int) {
 	go func() {
 		keyHashKey := fmt.Sprintf("key:%d", keyID)
@@ -953,12 +1085,16 @@ func (p *KeyProvider) AdjustKeyWeightAsync(keyID uint, delta int) {
 			return
 		}
 		currentWeight, _ := strconv.Atoi(details["weight"])
+		baseWeight, _ := strconv.Atoi(details["base_weight"])
+		if baseWeight <= 0 {
+			baseWeight = 500
+		}
 		newWeight := currentWeight + delta
 		if newWeight < 1 {
 			newWeight = 1
 		}
-		if newWeight > 1000 {
-			newWeight = 1000
+		if newWeight > baseWeight {
+			newWeight = baseWeight
 		}
 		p.store.HSet(keyHashKey, map[string]any{"weight": newWeight})
 	}()
@@ -966,15 +1102,19 @@ func (p *KeyProvider) AdjustKeyWeightAsync(keyID uint, delta int) {
 
 // startCacheHitCleanup 启动定期清理过期hash的goroutine
 func (p *KeyProvider) startCacheHitCleanup(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
+	cleanupTicker := time.NewTicker(1 * time.Minute)
+	syncTicker := time.NewTicker(5 * time.Minute)
+	defer cleanupTicker.Stop()
+	defer syncTicker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-cleanupTicker.C:
 			p.cleanupExpiredCacheHitEntries()
+		case <-syncTicker.C:
+			p.syncWeightsToDatabase()
 		}
 	}
 }
@@ -1027,4 +1167,59 @@ func (p *KeyProvider) StopCacheHitCleanup() {
 	if p.cleanupCancel != nil {
 		p.cleanupCancel()
 	}
+}
+
+// syncWeightsToDatabase 将store中的权重同步到数据库
+func (p *KeyProvider) syncWeightsToDatabase() {
+	// 获取所有活跃的key
+	var keys []models.APIKey
+	if err := p.db.Select("id", "weight").Find(&keys).Error; err != nil {
+		logrus.WithError(err).Error("Failed to fetch keys for weight sync")
+		return
+	}
+
+	if len(keys) == 0 {
+		return
+	}
+
+	updatedCount := 0
+	for _, key := range keys {
+		keyHashKey := fmt.Sprintf("key:%d", key.ID)
+		details, err := p.store.HGetAll(keyHashKey)
+		if err != nil {
+			continue
+		}
+
+		storeWeight, _ := strconv.Atoi(details["weight"])
+		if storeWeight <= 0 {
+			storeWeight = 500
+		}
+
+		// 只有权重不同时才更新数据库
+		if storeWeight != key.Weight {
+			if err := p.db.Model(&models.APIKey{}).Where("id = ?", key.ID).Update("weight", storeWeight).Error; err != nil {
+				logrus.WithFields(logrus.Fields{
+					"keyID": key.ID,
+					"error": err,
+				}).Error("Failed to sync weight to database")
+			} else {
+				updatedCount++
+			}
+		}
+	}
+
+	if updatedCount > 0 {
+		logrus.WithField("count", updatedCount).Debug("Weight sync: updated keys in database")
+	}
+}
+
+// GetRealTimeWeight 从store获取key的实时权重
+func (p *KeyProvider) GetRealTimeWeight(keyID uint) int {
+	keyHashKey := fmt.Sprintf("key:%d", keyID)
+	details, err := p.store.HGetAll(keyHashKey)
+	if err != nil {
+		return 0 // 返回0表示未找到，调用方可使用数据库值
+	}
+	weight, _ := strconv.Atoi(details["weight"])
+	return weight
 }

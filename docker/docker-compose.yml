@@ -1,6 +1,6 @@
 services:
   gpt-load:
-    image: ghcr.io/tbphp/gpt-load:latest
+    image: ghcr.io/rfym21/key-flow:latest
     # build:
     #   context: .
     #   dockerfile: Dockerfile

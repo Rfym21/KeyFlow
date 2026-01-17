@@ -117,7 +117,8 @@ type APIKey struct {
 	KeyHash      string     `gorm:"type:varchar(128);index" json:"key_hash"`
 	GroupID      uint       `gorm:"not null;index" json:"group_id"`
 	Status       string     `gorm:"type:varchar(50);not null;default:'active'" json:"status"`
-	Weight       int        `gorm:"not null;default:1" json:"weight"`
+	BaseWeight   int        `gorm:"not null;default:500" json:"base_weight"`
+	Weight       int        `gorm:"not null;default:500" json:"weight"`
 	Notes        string     `gorm:"type:varchar(255);default:''" json:"notes"`
 	RequestCount int64      `gorm:"not null;default:0" json:"request_count"`
 	FailureCount int64      `gorm:"not null;default:0" json:"failure_count"`

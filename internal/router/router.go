@@ -141,8 +141,10 @@ func registerProtectedAPIRoutes(api *gin.RouterGroup, serverHandler *handler.Ser
 		keys.POST("/validate-group", serverHandler.ValidateGroupKeys)
 		keys.POST("/test-multiple", serverHandler.TestMultipleKeys)
 		keys.POST("/update-weight", serverHandler.UpdateKeysWeight)
+		keys.POST("/reset-weight", serverHandler.ResetGroupKeysWeight)
 		keys.PUT("/:id/notes", serverHandler.UpdateKeyNotes)
 		keys.PUT("/:id/weight", serverHandler.UpdateKeyWeight)
+		keys.POST("/:id/reset-weight", serverHandler.ResetKeyWeight)
 	}
 
 	// Tasks

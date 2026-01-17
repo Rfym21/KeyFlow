@@ -28,7 +28,7 @@ func NewKeyImportService(taskService *TaskService, keyService *KeyService) *KeyI
 }
 
 // StartImportTask initiates a new asynchronous key import task.
-// Supports format: key:weight (e.g., "sk-xxx:10") or just key (default weight 100)
+// Supports format: key:weight (e.g., "sk-xxx:10") or just key (default weight 500)
 func (s *KeyImportService) StartImportTask(group *models.Group, keysText string) (*TaskStatus, error) {
 	keysWithWeight := s.KeyService.ParseKeysWithWeightFromText(keysText)
 	if len(keysWithWeight) == 0 {

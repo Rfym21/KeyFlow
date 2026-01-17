@@ -546,21 +546,3 @@ response = client.messages.create(
 > **重要说明**：作为透明代理服务，GPT-Load 完整保留各 AI 服务的原生 API 格式和认证方式。您只需替换端点地址并使用管理界面中配置的**代理密钥**即可无缝迁移。
 
 </details>
-
-## 相关项目
-
-- **[New API](https://github.com/QuantumNous/new-api)** - 优秀的 AI 模型聚合管理和分发系统
-
-## 贡献
-
-感谢所有为 GPT-Load 做出贡献的开发者！
-
-[![Contributors](https://contrib.rocks/image?repo=tbphp/gpt-load)](https://github.com/tbphp/gpt-load/graphs/contributors)
-
-## 许可证
-
-MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
-
-## Star 历史
-
-[![Stargazers over time](https://starchart.cc/tbphp/gpt-load.svg?variant=adaptive)](https://starchart.cc/tbphp/gpt-load)

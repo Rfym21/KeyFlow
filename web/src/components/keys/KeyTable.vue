@@ -12,6 +12,7 @@ import {
   EyeOffOutline,
   EyeOutline,
   Pencil,
+  RefreshOutline,
   RemoveCircleOutline,
   ScaleOutline,
   Search,
@@ -352,6 +353,17 @@ async function saveKeyWeight() {
   }
 }
 
+// 重置单个密钥权重
+async function resetKeyWeight(key: KeyRow) {
+  try {
+    await keysApi.resetKeyWeight(key.id);
+    window.$message.success(t("keys.keyWeightReset"));
+    await loadKeys();
+  } catch (error) {
+    console.error("Reset key weight failed", error);
+  }
+}
+
 async function restoreKey(key: KeyRow) {
   if (!props.selectedGroup?.id || !key.key_value || isRestoring.value) {
     return;
@@ -572,6 +584,32 @@ async function clearAllInvalid() {
   });
 }
 
+async function resetKeysWeight() {
+  if (!props.selectedGroup?.id) {
+    return;
+  }
+
+  dialog.warning({
+    title: t("keys.resetWeight"),
+    content: t("keys.confirmResetWeight"),
+    positiveText: t("common.confirm"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: async () => {
+      if (!props.selectedGroup?.id) {
+        return;
+      }
+
+      try {
+        const result = await keysApi.resetKeysWeight(props.selectedGroup.id);
+        window.$message.success(t("keys.resetWeightSuccess", { count: result.updated_count }));
+        await loadKeys();
+      } catch (_error) {
+        console.error("Reset weight failed");
+      }
+    },
+  });
+}
+
 async function clearAll() {
   if (!props.selectedGroup?.id || isDeling.value) {
     return;
@@ -665,6 +703,12 @@ function resetPage() {
             <n-icon :component="RemoveCircleOutline" />
           </template>
           {{ t("keys.deleteKey") }}
+        </n-button>
+        <n-button type="warning" size="small" @click="resetKeysWeight">
+          <template #icon>
+            <n-icon :component="RefreshOutline" />
+          </template>
+          {{ t("keys.resetWeight") }}
         </n-button>
       </div>
       <div class="toolbar-right">
@@ -779,26 +823,28 @@ function resetPage() {
               </div>
             </div>
 
-            <!-- 统计信息 + 操作按钮行 -->
+            <!-- 统计信息 + 操作按钮 -->
             <div class="key-bottom">
-              <div class="key-stats">
-                <span class="stat-item" :title="t('keys.weightTip')">
-                  {{ t("keys.weightShort") }}
-                  <strong>{{ key.weight || 1 }}</strong>
-                </span>
+              <!-- 统计信息（一行） -->
+              <div class="key-stats-row">
                 <span class="stat-item">
                   {{ t("keys.requestsShort") }}
                   <strong>{{ key.request_count }}</strong>
                 </span>
-                <span class="stat-item">
+                <span class="stat-item failure-stat">
                   {{ t("keys.failuresShort") }}
                   <strong>{{ key.failure_count }}</strong>
                 </span>
-                <span class="stat-item">
+                <span class="stat-item" :title="t('keys.weightTip')">
+                  {{ t("keys.weightShort") }}
+                  <strong>{{ key.weight || 500 }}</strong>
+                </span>
+                <span class="stat-item time-stat">
                   {{ key.last_used_at ? formatRelativeTime(key.last_used_at) : t("keys.unused") }}
                 </span>
               </div>
-              <n-button-group class="key-actions">
+              <!-- 操作按钮 -->
+              <div class="key-actions-row">
                 <n-button
                   round
                   tertiary
@@ -808,6 +854,15 @@ function resetPage() {
                   :title="t('keys.testKey')"
                 >
                   {{ t("keys.testShort") }}
+                </n-button>
+                <n-button
+                  round
+                  tertiary
+                  size="tiny"
+                  @click="resetKeyWeight(key)"
+                  :title="t('keys.resetKeyWeight')"
+                >
+                  {{ t("keys.resetWeightShort") }}
                 </n-button>
                 <n-button
                   v-if="key.status !== 'active'"
@@ -829,7 +884,7 @@ function resetPage() {
                 >
                   {{ t("common.deleteShort") }}
                 </n-button>
-              </n-button-group>
+              </div>
             </div>
           </div>
         </div>
@@ -1147,22 +1202,27 @@ function resetPage() {
   min-width: 0;
 }
 
-/* 底部统计和按钮行 */
+/* 底部统计和按钮区 */
 .key-bottom {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.key-stats {
+.key-stats-row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   font-size: 12px;
-  overflow: hidden;
   color: var(--text-secondary);
-  flex: 1;
-  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.key-actions-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
 .stat-item {
@@ -1175,11 +1235,16 @@ function resetPage() {
   font-weight: 600;
 }
 
-.key-actions {
-  flex-shrink: 0;
-  &:deep(.n-button) {
-    padding: 0 4px;
-  }
+.failure-stat {
+  color: #d03050;
+}
+
+.failure-stat strong {
+  color: #d03050;
+}
+
+.time-stat {
+  margin-left: auto;
 }
 
 .key-text {

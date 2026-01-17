@@ -316,4 +316,15 @@ export const keysApi = {
     const res = await http.get(`/groups/${groupId}/parent-aggregate-groups`);
     return res.data || [];
   },
+
+  // 重置分组所有密钥权重为默认值
+  async resetKeysWeight(groupId: number): Promise<{ updated_count: number }> {
+    const res = await http.post("/keys/reset-weight", { group_id: groupId });
+    return res.data;
+  },
+
+  // 重置单个密钥权重为其基础权重
+  async resetKeyWeight(keyId: number): Promise<void> {
+    await http.post(`/keys/${keyId}/reset-weight`);
+  },
 };
