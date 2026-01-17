@@ -34,10 +34,13 @@ type GroupConfig struct {
 	ProxyURL                     *string `json:"proxy_url,omitempty"`
 	MaxRetries                   *int    `json:"max_retries,omitempty"`
 	BlacklistThreshold           *int    `json:"blacklist_threshold,omitempty"`
+	BlacklistConsecutiveMode     *bool   `json:"blacklist_consecutive_mode,omitempty"`
 	KeyValidationIntervalMinutes *int    `json:"key_validation_interval_minutes,omitempty"`
 	KeyValidationConcurrency     *int    `json:"key_validation_concurrency,omitempty"`
 	KeyValidationTimeoutSeconds  *int    `json:"key_validation_timeout_seconds,omitempty"`
 	EnableRequestBodyLogging     *bool   `json:"enable_request_body_logging,omitempty"`
+	RequestBodyLogMode           *string `json:"request_body_log_mode,omitempty"`
+	DisableRequestBodyTruncate   *bool   `json:"disable_request_body_truncate,omitempty"`
 	EnableCacheHitEnhancement    *bool   `json:"enable_cache_hit_enhancement,omitempty"`
 }
 

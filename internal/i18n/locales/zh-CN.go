@@ -133,6 +133,10 @@ var MessagesZhCN = map[string]string{
 	"config.log_write_interval_desc":          "请求日志从缓存写入数据库的周期（分钟），0为实时写入数据。",
 	"config.enable_request_body_logging":      "启用日志详情",
 	"config.enable_request_body_logging_desc": "是否在请求日志中记录完整的请求体内容。启用此功能会增加内存以及存储空间的占用。",
+	"config.request_body_log_mode":            "请求体记录模式",
+	"config.request_body_log_mode_desc":       "控制何时记录请求体：all（记录所有请求）、error_only（仅记录错误请求）。",
+	"config.disable_request_body_truncate":    "禁用请求体截断",
+	"config.disable_request_body_truncate_desc": "默认请求体会截断到64KB，启用此选项后将记录完整请求体，可能显著增加存储占用。",
 
 	// Request settings related
 	"config.request_timeout":              "请求超时（秒）",

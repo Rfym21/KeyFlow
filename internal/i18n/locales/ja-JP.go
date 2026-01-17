@@ -133,6 +133,10 @@ var MessagesJaJP = map[string]string{
 	"config.log_write_interval_desc":          "リクエストログをキャッシュからデータベースに書き込む間隔（分）、0でリアルタイム書き込み。",
 	"config.enable_request_body_logging":      "リクエストボディログを有効化",
 	"config.enable_request_body_logging_desc": "完全なリクエストボディの内容をログに記録するかどうか。有効にするとメモリとストレージの使用量が増加します。",
+	"config.request_body_log_mode":            "リクエストボディ記録モード",
+	"config.request_body_log_mode_desc":       "リクエストボディを記録するタイミング：all（すべてのリクエスト）、error_only（エラーリクエストのみ）。",
+	"config.disable_request_body_truncate":    "リクエストボディ切り捨て無効化",
+	"config.disable_request_body_truncate_desc": "デフォルトではリクエストボディは64KBに切り捨てられます。有効にすると完全なリクエストボディを記録しますが、ストレージ使用量が大幅に増加する可能性があります。",
 
 	// Request settings related
 	"config.request_timeout":              "リクエストタイムアウト（秒）",

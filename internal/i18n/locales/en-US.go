@@ -133,6 +133,10 @@ var MessagesEnUS = map[string]string{
 	"config.log_write_interval_desc":          "Interval (in minutes) for writing request logs from cache to database, 0 for real-time writes.",
 	"config.enable_request_body_logging":      "Enable Request Body Logging",
 	"config.enable_request_body_logging_desc": "Whether to log complete request body content. Enabling this will increase memory and storage usage.",
+	"config.request_body_log_mode":            "Request Body Log Mode",
+	"config.request_body_log_mode_desc":       "Control when to log request body: all (log all requests), error_only (log only error requests).",
+	"config.disable_request_body_truncate":    "Disable Request Body Truncation",
+	"config.disable_request_body_truncate_desc": "By default, request body is truncated to 64KB. Enable this to log full request body, which may significantly increase storage usage.",
 
 	// Request settings related
 	"config.request_timeout":              "Request Timeout (seconds)",

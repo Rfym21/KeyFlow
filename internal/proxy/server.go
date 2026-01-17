@@ -309,9 +309,23 @@ func (ps *ProxyServer) logRequest(
 	}
 
 	var requestBodyToLog, userAgent string
+	isError := finalError != nil || statusCode >= 400
 
-	if group.EffectiveConfig.EnableRequestBodyLogging {
-		requestBodyToLog = utils.TruncateString(string(bodyBytes), 65000)
+	// 判断是否需要记录请求体
+	shouldLogBody := group.EffectiveConfig.EnableRequestBodyLogging
+	if shouldLogBody {
+		logMode := group.EffectiveConfig.RequestBodyLogMode
+		if logMode == "error_only" && !isError {
+			shouldLogBody = false
+		}
+	}
+
+	if shouldLogBody {
+		if group.EffectiveConfig.DisableRequestBodyTruncate {
+			requestBodyToLog = string(bodyBytes)
+		} else {
+			requestBodyToLog = utils.TruncateString(string(bodyBytes), 65000)
+		}
 		userAgent = c.Request.UserAgent()
 	}
 
@@ -320,7 +334,7 @@ func (ps *ProxyServer) logRequest(
 	logEntry := &models.RequestLog{
 		GroupID:      group.ID,
 		GroupName:    group.Name,
-		IsSuccess:    finalError == nil && statusCode < 400,
+		IsSuccess:    !isError,
 		SourceIP:     c.ClientIP(),
 		StatusCode:   statusCode,
 		RequestPath:  utils.TruncateString(c.Request.URL.String(), 500),
