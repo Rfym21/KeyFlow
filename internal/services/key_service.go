@@ -548,3 +548,29 @@ func (s *KeyService) ClearKeyStats(keyID uint) error {
 			"failure_count": 0,
 		}).Error
 }
+
+// DisableKey disables a single key by setting its status to invalid
+func (s *KeyService) DisableKey(keyID uint) error {
+	var key models.APIKey
+	if err := s.DB.First(&key, keyID).Error; err != nil {
+		return err
+	}
+
+	if key.Status == models.KeyStatusInvalid {
+		return nil // Already disabled
+	}
+
+	// Update database
+	if err := s.DB.Model(&key).Update("status", models.KeyStatusInvalid).Error; err != nil {
+		return err
+	}
+
+	// Update store - remove from active list and update status
+	activeKeysListKey := fmt.Sprintf("group:%d:active_keys", key.GroupID)
+	keyHashKey := fmt.Sprintf("key:%d", keyID)
+
+	s.KeyProvider.GetStore().LRem(activeKeysListKey, 0, keyID)
+	s.KeyProvider.GetStore().HSet(keyHashKey, map[string]any{"status": models.KeyStatusInvalid})
+
+	return nil
+}

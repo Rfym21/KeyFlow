@@ -444,6 +444,10 @@ export default {
     clearKeyStats: "統計クリア",
     clearStatsShort: "クリア",
     keyStatsCleared: "キー統計がクリアされました",
+    disableKey: "キーを無効化",
+    disableShort: "無効化",
+    confirmDisableKey: "キー {key} を無効化してもよろしいですか？",
+    keyDisabled: "キーが無効化されました",
   },
   subGroups: {
     addSubGroup: "サブグループを追加",

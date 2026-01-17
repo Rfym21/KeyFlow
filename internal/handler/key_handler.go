@@ -639,3 +639,20 @@ func (s *Server) ClearKeyStats(c *gin.Context) {
 
 	response.Success(c, nil)
 }
+
+// DisableKey handles disabling a single key.
+func (s *Server) DisableKey(c *gin.Context) {
+	keyID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || keyID <= 0 {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrBadRequest, "invalid key ID"))
+		return
+	}
+
+	if err := s.KeyService.DisableKey(uint(keyID)); err != nil {
+		logrus.WithError(err).WithField("keyID", keyID).Error("Failed to disable key")
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrDatabase, err.Error()))
+		return
+	}
+
+	response.Success(c, nil)
+}

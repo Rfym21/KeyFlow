@@ -56,6 +56,11 @@ func NewProvider(db *gorm.DB, store store.Store, settingsManager *config.SystemS
 	return p
 }
 
+// GetStore returns the underlying store
+func (p *KeyProvider) GetStore() store.Store {
+	return p.store
+}
+
 // SelectKey 为指定的分组使用加权随机算法选择一个可用的 APIKey。
 func (p *KeyProvider) SelectKey(groupID uint) (*models.APIKey, error) {
 	activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)

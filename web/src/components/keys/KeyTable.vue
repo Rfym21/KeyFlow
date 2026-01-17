@@ -398,6 +398,29 @@ async function clearKeyStats(key: KeyRow) {
   }
 }
 
+// 禁用单个密钥
+async function disableKey(key: KeyRow) {
+  if (key.status === "invalid") {
+    return;
+  }
+
+  dialog.warning({
+    title: t("keys.disableKey"),
+    content: t("keys.confirmDisableKey", { key: maskKey(key.key_value) }),
+    positiveText: t("common.confirm"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: async () => {
+      try {
+        await keysApi.disableKey(key.id);
+        window.$message.success(t("keys.keyDisabled"));
+        await loadKeys();
+      } catch (error) {
+        console.error("Disable key failed", error);
+      }
+    },
+  });
+}
+
 async function restoreKey(key: KeyRow) {
   if (!props.selectedGroup?.id || !key.key_value || isRestoring.value) {
     return;
@@ -967,9 +990,20 @@ function toggleSortOrder() {
                   size="tiny"
                   @click="restoreKey(key)"
                   :title="t('keys.restoreKey')"
-                  type="warning"
+                  type="success"
                 >
                   {{ t("keys.restoreShort") }}
+                </n-button>
+                <n-button
+                  v-if="key.status === 'active'"
+                  round
+                  tertiary
+                  size="tiny"
+                  type="error"
+                  @click="disableKey(key)"
+                  :title="t('keys.disableKey')"
+                >
+                  {{ t("keys.disableShort") }}
                 </n-button>
                 <n-button
                   round

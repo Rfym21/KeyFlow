@@ -340,4 +340,9 @@ export const keysApi = {
   async clearKeyStats(keyId: number): Promise<void> {
     await http.post(`/keys/${keyId}/clear-stats`);
   },
+
+  // 禁用单个密钥
+  async disableKey(keyId: number): Promise<void> {
+    await http.post(`/keys/${keyId}/disable`);
+  },
 };

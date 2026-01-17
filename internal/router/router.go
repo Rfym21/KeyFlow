@@ -147,6 +147,7 @@ func registerProtectedAPIRoutes(api *gin.RouterGroup, serverHandler *handler.Ser
 		keys.PUT("/:id/weight", serverHandler.UpdateKeyWeight)
 		keys.POST("/:id/reset-weight", serverHandler.ResetKeyWeight)
 		keys.POST("/:id/clear-stats", serverHandler.ClearKeyStats)
+		keys.POST("/:id/disable", serverHandler.DisableKey)
 	}
 
 	// Tasks

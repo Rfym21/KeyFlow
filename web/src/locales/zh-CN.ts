@@ -428,6 +428,10 @@ export default {
     clearKeyStats: "清除统计",
     clearStatsShort: "清除",
     keyStatsCleared: "密钥统计已清除",
+    disableKey: "禁用密钥",
+    disableShort: "禁用",
+    confirmDisableKey: "确定要禁用密钥 {key} 吗？",
+    keyDisabled: "密钥已禁用",
   },
   subGroups: {
     addSubGroup: "添加子分组",

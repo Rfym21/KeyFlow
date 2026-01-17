@@ -444,6 +444,10 @@ export default {
     clearKeyStats: "Clear Stats",
     clearStatsShort: "Clear",
     keyStatsCleared: "Key stats cleared",
+    disableKey: "Disable Key",
+    disableShort: "Disable",
+    confirmDisableKey: "Are you sure you want to disable key {key}?",
+    keyDisabled: "Key disabled",
   },
   subGroups: {
     addSubGroup: "Add Sub Group",
