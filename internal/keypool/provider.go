@@ -18,6 +18,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // cacheHitRecord 用于跟踪cache_hit条目以便定期清理
@@ -283,7 +284,7 @@ func (p *KeyProvider) handleSuccess(keyID uint, keyHashKey, activeKeysListKey st
 
 	return p.executeTransactionWithRetry(func(tx *gorm.DB) error {
 		var key models.APIKey
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&key, keyID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&key, keyID).Error; err != nil {
 			return fmt.Errorf("failed to lock key %d for update: %w", keyID, err)
 		}
 
@@ -331,7 +332,7 @@ func (p *KeyProvider) handleFailure(apiKey *models.APIKey, group *models.Group, 
 
 	return p.executeTransactionWithRetry(func(tx *gorm.DB) error {
 		var key models.APIKey
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&key, apiKey.ID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&key, apiKey.ID).Error; err != nil {
 			return fmt.Errorf("failed to lock key %d for update: %w", apiKey.ID, err)
 		}
 

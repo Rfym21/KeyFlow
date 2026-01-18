@@ -39,6 +39,7 @@ func NewDB(configManager types.ConfigManager) (*gorm.DB, error) {
 	}
 
 	var dialector gorm.Dialector
+	prepareStmt := true
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
 		dialector = postgres.New(postgres.Config{
 			DSN:                  dsn,
@@ -53,6 +54,8 @@ func NewDB(configManager types.ConfigManager) (*gorm.DB, error) {
 			}
 		}
 		dialector = mysql.Open(dsn)
+		// MySQL 非 root 用户使用 PrepareStmt 可能导致权限问题，禁用以提高兼容性
+		prepareStmt = false
 	} else {
 		if err := os.MkdirAll(filepath.Dir(dsn), 0755); err != nil {
 			return nil, fmt.Errorf("failed to create database directory: %w", err)
@@ -63,7 +66,7 @@ func NewDB(configManager types.ConfigManager) (*gorm.DB, error) {
 	var err error
 	DB, err = gorm.Open(dialector, &gorm.Config{
 		Logger:      newLogger,
-		PrepareStmt: true,
+		PrepareStmt: prepareStmt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
