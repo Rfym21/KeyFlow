@@ -154,7 +154,7 @@ func (p *KeyProvider) SelectKey(groupID uint) (*models.APIKey, error) {
 	return p.getKeyDetails(groupID, selectedKeyID)
 }
 
-// selectKeyByRotate 使用简单轮询选择 key（单 key 场景优化）
+// selectKeyByRotate 使用简单轮询选择 key（O(1) 复杂度，适用于权重相同或未开启缓存命中增强的场景）
 func (p *KeyProvider) selectKeyByRotate(groupID uint, activeKeysListKey string) (*models.APIKey, error) {
 	keyIDStr, err := p.store.Rotate(activeKeysListKey)
 	if err != nil {
@@ -931,8 +931,10 @@ func (p *KeyProvider) ResetSingleKeyWeight(keyID uint) error {
 
 // SelectKeyWithCacheHit 支持缓存命中的key选择
 func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, enableCacheHit bool) (*models.APIKey, error) {
+	// 没开启缓存命中增强，权重不会变化，直接使用简单轮询，跳过 O(n) 权重计算
 	if !enableCacheHit {
-		return p.SelectKey(groupID)
+		activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
+		return p.selectKeyByRotate(groupID, activeKeysListKey)
 	}
 
 	messages, size := ExtractMessages(bodyBytes)
