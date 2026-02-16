@@ -129,7 +129,7 @@ func (ps *ProxyServer) executeRequestWithRetry(
 	// 获取缓存命中增强配置
 	enableCacheHit := cfg.EnableCacheHitEnhancement
 
-	apiKey, err := ps.keyProvider.SelectKeyWithCacheHit(group.ID, bodyBytes, enableCacheHit)
+	apiKey, err := ps.keyProvider.SelectKeyWithCacheHit(group.ID, bodyBytes, c.Request.Header, enableCacheHit)
 	if err != nil {
 		logrus.Errorf("Failed to select a key for group %s on attempt %d: %v", group.Name, retryCount+1, err)
 		response.Error(c, app_errors.NewAPIError(app_errors.ErrNoKeysAvailable, err.Error()))

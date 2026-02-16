@@ -11,6 +11,7 @@ import (
 	"gpt-load/internal/models"
 	"gpt-load/internal/store"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,10 +24,11 @@ import (
 
 // cacheHitRecord 用于跟踪cache_hit条目以便定期清理
 type cacheHitRecord struct {
-	GroupID uint
-	Hash    string
-	KeyID   uint
-	ExpTime int64
+	GroupID   uint
+	Hash      string
+	KeyID     uint
+	ExpTime   int64
+	IsSession bool // 是否为 session 绑定
 }
 
 type KeyProvider struct {
@@ -377,7 +379,7 @@ func (p *KeyProvider) LoadKeysFromDB() error {
 
 	// 1. 分批从数据库加载并使用 Pipeline 写入 Redis
 	allActiveKeyIDs := make(map[uint][]any)
-	batchSize := 1000
+	batchSize := 10000
 	var batchKeys []*models.APIKey
 
 	err := p.db.Model(&models.APIKey{}).FindInBatches(&batchKeys, batchSize, func(tx *gorm.DB, batch int) error {
@@ -443,13 +445,8 @@ func (p *KeyProvider) AddKeys(groupID uint, keys []models.APIKey) error {
 			return err
 		}
 
-		for _, key := range keys {
-			if err := p.addKeyToStore(&key); err != nil {
-				logrus.WithFields(logrus.Fields{"keyID": key.ID, "error": err}).Error("Failed to add key to store after DB creation, rolling back transaction")
-				return err
-			}
-		}
-		return nil
+		// 使用批量方法添加到缓存
+		return p.addKeysToCacheBatch(groupID, keys)
 	})
 
 	return err
@@ -712,6 +709,48 @@ func (p *KeyProvider) addKeyToStore(key *models.APIKey) error {
 	return nil
 }
 
+// addKeysToCacheBatch 批量添加密钥到缓存（用于批量导入场景）
+func (p *KeyProvider) addKeysToCacheBatch(groupID uint, keys []models.APIKey) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	// 1. 批量 HSet 密钥详情
+	if pipeliner, ok := p.store.(store.RedisPipeliner); ok {
+		// Redis: 使用 Pipeline 批量操作
+		pipe := pipeliner.Pipeline()
+		for i := range keys {
+			keyHashKey := fmt.Sprintf("key:%d", keys[i].ID)
+			pipe.HSet(keyHashKey, p.apiKeyToMap(&keys[i]))
+		}
+		if err := pipe.Exec(); err != nil {
+			return fmt.Errorf("failed to batch HSet keys: %w", err)
+		}
+	} else {
+		// MemoryStore: 降级为逐个 HSet
+		for i := range keys {
+			keyHashKey := fmt.Sprintf("key:%d", keys[i].ID)
+			if err := p.store.HSet(keyHashKey, p.apiKeyToMap(&keys[i])); err != nil {
+				return fmt.Errorf("failed to HSet key %d: %w", keys[i].ID, err)
+			}
+		}
+	}
+
+	// 2. 收集所有密钥 ID
+	activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
+	activeKeyIDs := make([]any, len(keys))
+	for i := range keys {
+		activeKeyIDs[i] = keys[i].ID
+	}
+
+	// 3. 批量 LPush 活跃密钥
+	if err := p.store.LPush(activeKeysListKey, activeKeyIDs...); err != nil {
+		return fmt.Errorf("failed to batch LPush keys to group %d: %w", groupID, err)
+	}
+
+	return nil
+}
+
 // removeKeyFromStore is a helper to remove a single key from the cache.
 func (p *KeyProvider) removeKeyFromStore(keyID, groupID uint) error {
 	activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
@@ -929,19 +968,133 @@ func (p *KeyProvider) ResetSingleKeyWeight(keyID uint) error {
 	})
 }
 
-// SelectKeyWithCacheHit 支持缓存命中的key选择
-func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, enableCacheHit bool) (*models.APIKey, error) {
+// SelectKeyWithCacheHit 支持缓存命中的key选择（含 Session ID 绑定 + 动态 TTL）
+func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, headers http.Header, enableCacheHit bool) (*models.APIKey, error) {
 	// 没开启缓存命中增强，权重不会变化，直接使用简单轮询，跳过 O(n) 权重计算
 	if !enableCacheHit {
 		activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
 		return p.selectKeyByRotate(groupID, activeKeysListKey)
 	}
 
-	messages, size := ExtractMessages(bodyBytes)
-	if size <= 4096 || len(messages) < 3 {
-		return p.SelectKey(groupID)
+	ttl := DetectCacheTTL(bodyBytes)
+	sessionID := ExtractSessionID(bodyBytes, headers)
+
+	// 有 Session ID → session 绑定优先
+	if sessionID != "" {
+		return p.selectKeyBySession(groupID, sessionID, bodyBytes, ttl)
 	}
 
+	// 无 Session ID → 内容哈希匹配（无门槛限制）
+	messages, _ := ExtractMessages(bodyBytes)
+	if len(messages) > 0 {
+		return p.selectKeyByHash(groupID, messages, ttl)
+	}
+
+	return p.SelectKey(groupID)
+}
+
+// selectKeyBySession 基于 Session ID 绑定选择 key
+func (p *KeyProvider) selectKeyBySession(groupID uint, sessionID string, bodyBytes []byte, ttl time.Duration) (*models.APIKey, error) {
+	cacheKey := fmt.Sprintf("session:group:%d:sid:%s", groupID, sessionID)
+
+	// 1. 尝试命中已有 session 绑定
+	data, err := p.store.Get(cacheKey)
+	if err == nil && data != nil {
+		var entry CacheHitEntry
+		if err := json.Unmarshal(data, &entry); err == nil {
+			apiKey, err := p.getKeyDetails(groupID, uint64(entry.KeyID))
+			if err == nil && apiKey.Status == models.KeyStatusActive {
+				// 命中有效 key，刷新 TTL
+				newExpTime := time.Now().Add(ttl).Unix()
+				entry.ExpTime = newExpTime
+				if d, err := json.Marshal(entry); err == nil {
+					p.store.Set(cacheKey, d, ttl)
+				}
+				// 更新跟踪记录的过期时间
+				p.cacheHitMu.Lock()
+				if rec, ok := p.cacheHitRecords[cacheKey]; ok {
+					rec.ExpTime = newExpTime
+				}
+				p.cacheHitMu.Unlock()
+
+				logrus.WithFields(logrus.Fields{
+					"groupID":   groupID,
+					"keyID":     entry.KeyID,
+					"sessionID": sessionID[:8] + "...",
+				}).Debug("Cache hit enhancement: session hit, refreshed TTL")
+				return apiKey, nil
+			}
+			// key 已失效，删除条目并恢复权重
+			p.store.Delete(cacheKey)
+			p.removeCacheHitRecord(cacheKey)
+			p.AdjustKeyWeightAsync(entry.KeyID, 1)
+		}
+	}
+
+	// 2. 未命中 → 选新 key
+	key, err := p.SelectKey(groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	// SetNX 原子写入，防止并发竞争
+	expTime := time.Now().Add(ttl).Unix()
+	entry := CacheHitEntry{KeyID: key.ID, ExpTime: expTime}
+	entryData, _ := json.Marshal(entry)
+
+	ok, err := p.store.SetNX(cacheKey, entryData, ttl)
+	if err != nil {
+		// SetNX 出错，仍然返回已选 key
+		return key, nil
+	}
+
+	if ok {
+		// 成功写入，跟踪记录，权重 -1
+		p.cacheHitMu.Lock()
+		p.cacheHitRecords[cacheKey] = &cacheHitRecord{
+			GroupID:   groupID,
+			Hash:      sessionID,
+			KeyID:     key.ID,
+			ExpTime:   expTime,
+			IsSession: true,
+		}
+		p.cacheHitMu.Unlock()
+		p.AdjustKeyWeightAsync(key.ID, -1)
+
+		logrus.WithFields(logrus.Fields{
+			"groupID":   groupID,
+			"keyID":     key.ID,
+			"sessionID": sessionID[:8] + "...",
+		}).Debug("Cache hit enhancement: created new session binding")
+	} else {
+		// 已被其他请求写入，获取该 key
+		data, err := p.store.Get(cacheKey)
+		if err == nil && data != nil {
+			var existing CacheHitEntry
+			if err := json.Unmarshal(data, &existing); err == nil {
+				if apiKey, err := p.getKeyDetails(groupID, uint64(existing.KeyID)); err == nil && apiKey.Status == models.KeyStatusActive {
+					return apiKey, nil
+				}
+			}
+		}
+		// 读不到或已失效，返回当前选中的 key
+	}
+
+	// 同时为 hash 创建绑定（session→hash 双重覆盖）
+	messages, _ := ExtractMessages(bodyBytes)
+	if len(messages) > 0 {
+		newHash := CalculatePromptHash(messages, 2)
+		if newHash != "" {
+			p.setCacheHitEntryWithTTL(groupID, newHash, key.ID, ttl, false)
+			p.AdjustKeyWeightAsync(key.ID, -1)
+		}
+	}
+
+	return key, nil
+}
+
+// selectKeyByHash 基于内容哈希匹配选择 key（无门槛限制）
+func (p *KeyProvider) selectKeyByHash(groupID uint, messages []json.RawMessage, ttl time.Duration) (*models.APIKey, error) {
 	// 尝试匹配：dropCount = 2, 4, 6
 	for _, dropCount := range []int{2, 4, 6} {
 		hash := CalculatePromptHash(messages, dropCount)
@@ -957,15 +1110,15 @@ func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, enab
 				cacheKey := fmt.Sprintf("cache_hit:group:%d:hash:%s", groupID, hash)
 				p.store.Delete(cacheKey)
 				p.removeCacheHitRecord(cacheKey)
-				p.AdjustKeyWeightAsync(entry.KeyID, 1) // 删除hash，权重+1
+				p.AdjustKeyWeightAsync(entry.KeyID, 1)
 				continue
 			}
 
 			// 记录新hash（如果与命中的不同）
 			newHash := CalculatePromptHash(messages, 2)
 			if newHash != "" && newHash != hash {
-				p.setCacheHitEntry(groupID, newHash, entry.KeyID)
-				p.AdjustKeyWeightAsync(entry.KeyID, -1) // 新hash创建，权重-1
+				p.setCacheHitEntryWithTTL(groupID, newHash, entry.KeyID, ttl, false)
+				p.AdjustKeyWeightAsync(entry.KeyID, -1)
 			}
 
 			// 延迟删除旧hash（如果dropCount > 2表示是旧hash命中）
@@ -991,7 +1144,7 @@ func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, enab
 
 	newHash := CalculatePromptHash(messages, 2)
 	if newHash != "" {
-		p.setCacheHitEntry(groupID, newHash, key.ID)
+		p.setCacheHitEntryWithTTL(groupID, newHash, key.ID, ttl, false)
 		p.AdjustKeyWeightAsync(key.ID, -1)
 		logrus.WithFields(logrus.Fields{
 			"groupID": groupID,
@@ -1017,21 +1170,22 @@ func (p *KeyProvider) getCacheHitEntry(groupID uint, hash string) (*CacheHitEntr
 	return &entry, nil
 }
 
-// setCacheHitEntry 设置缓存条目（10分钟过期）
-func (p *KeyProvider) setCacheHitEntry(groupID uint, hash string, keyID uint) {
+// setCacheHitEntryWithTTL 设置缓存条目（支持动态 TTL 和 session 标记）
+func (p *KeyProvider) setCacheHitEntryWithTTL(groupID uint, hash string, keyID uint, ttl time.Duration, isSession bool) {
 	cacheKey := fmt.Sprintf("cache_hit:group:%d:hash:%s", groupID, hash)
-	expTime := time.Now().Add(10 * time.Minute).Unix()
+	expTime := time.Now().Add(ttl).Unix()
 	entry := CacheHitEntry{KeyID: keyID, ExpTime: expTime}
 	data, _ := json.Marshal(entry)
-	p.store.Set(cacheKey, data, 10*time.Minute)
+	p.store.Set(cacheKey, data, ttl)
 
 	// 跟踪条目以便定期清理
 	p.cacheHitMu.Lock()
 	p.cacheHitRecords[cacheKey] = &cacheHitRecord{
-		GroupID: groupID,
-		Hash:    hash,
-		KeyID:   keyID,
-		ExpTime: expTime,
+		GroupID:   groupID,
+		Hash:      hash,
+		KeyID:     keyID,
+		ExpTime:   expTime,
+		IsSession: isSession,
 	}
 	p.cacheHitMu.Unlock()
 }
@@ -1147,7 +1301,12 @@ func (p *KeyProvider) cleanupExpiredCacheHitEntries() {
 
 	// 清理过期条目并恢复权重
 	for _, record := range expiredRecords {
-		cacheKey := fmt.Sprintf("cache_hit:group:%d:hash:%s", record.GroupID, record.Hash)
+		var cacheKey string
+		if record.IsSession {
+			cacheKey = fmt.Sprintf("session:group:%d:sid:%s", record.GroupID, record.Hash)
+		} else {
+			cacheKey = fmt.Sprintf("cache_hit:group:%d:hash:%s", record.GroupID, record.Hash)
+		}
 
 		// 从store中删除（可能已经被TTL自动删除）
 		p.store.Delete(cacheKey)
@@ -1158,11 +1317,20 @@ func (p *KeyProvider) cleanupExpiredCacheHitEntries() {
 		// 从跟踪map中删除
 		p.removeCacheHitRecord(cacheKey)
 
+		entryType := "hash"
+		if record.IsSession {
+			entryType = "session"
+		}
+		hashPreview := record.Hash
+		if len(hashPreview) > 8 {
+			hashPreview = hashPreview[:8] + "..."
+		}
 		logrus.WithFields(logrus.Fields{
 			"groupID": record.GroupID,
 			"keyID":   record.KeyID,
-			"hash":    record.Hash[:8] + "...",
-		}).Debug("Cache hit enhancement: cleaned up expired hash, restored weight")
+			"type":    entryType,
+			"hash":    hashPreview,
+		}).Debug("Cache hit enhancement: cleaned up expired entry, restored weight")
 	}
 
 	if len(expiredRecords) > 0 {
