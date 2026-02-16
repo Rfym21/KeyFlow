@@ -384,6 +384,8 @@ func (s *KeyService) ListKeysInGroupQuery(groupID uint, statusFilter string, sea
 	}
 
 	// 根据排序字段排序
+	isPostgres := s.DB.Dialector.Name() == "postgres"
+
 	switch sortBy {
 	case "weight":
 		query = query.Order("weight " + sortOrder)
@@ -392,15 +394,25 @@ func (s *KeyService) ListKeysInGroupQuery(groupID uint, statusFilter string, sea
 	case "failure_count":
 		query = query.Order("failure_count " + sortOrder)
 	case "last_used_at":
-		// 使用兼容 MySQL 的方式实现 NULLS LAST
-		if sortOrder == "asc" {
-			query = query.Order("last_used_at IS NULL DESC, last_used_at ASC")
+		if isPostgres {
+			if sortOrder == "asc" {
+				query = query.Order("last_used_at ASC NULLS LAST, id ASC")
+			} else {
+				query = query.Order("last_used_at DESC NULLS LAST, id DESC")
+			}
 		} else {
-			query = query.Order("last_used_at IS NULL, last_used_at DESC")
+			if sortOrder == "asc" {
+				query = query.Order("last_used_at IS NULL DESC, last_used_at ASC, id ASC")
+			} else {
+				query = query.Order("last_used_at IS NULL, last_used_at DESC, id DESC")
+			}
 		}
 	default:
-		// 默认按最后使用时间排序，NULL 值排在最后
-		query = query.Order("last_used_at IS NULL, last_used_at DESC, updated_at DESC")
+		if isPostgres {
+			query = query.Order("last_used_at DESC NULLS LAST, id DESC")
+		} else {
+			query = query.Order("last_used_at IS NULL, last_used_at DESC, id DESC")
+		}
 	}
 
 	return query
