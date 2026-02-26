@@ -44,5 +44,7 @@ jobs:
           tags: |
             ghcr.io/${{ steps.version.outputs.owner }}/${{ steps.version.outputs.name }}:latest
             ghcr.io/${{ steps.version.outputs.owner }}/${{ steps.version.outputs.name }}:${{ steps.version.outputs.tag }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

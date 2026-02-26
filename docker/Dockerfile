@@ -2,8 +2,10 @@
 FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend
 
 WORKDIR /build
+COPY ./web/package.json ./web/package-lock.json ./
+RUN npm install
 COPY ./web .
-RUN npm install && npm run build
+RUN npm run build
 
 
 # Stage 2: Build Go binary (cross-compile)
@@ -20,11 +22,14 @@ ENV GO111MODULE=on \
 
 WORKDIR /build
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 COPY . .
 COPY --from=frontend /build/dist ./web/dist
-RUN go build -ldflags "-s -w -X gpt-load/internal/version.Version=${VERSION}" -o gpt-load
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags "-s -w -X gpt-load/internal/version.Version=${VERSION}" -o gpt-load
 
 
 # Stage 3: Final image (multi-platform)
