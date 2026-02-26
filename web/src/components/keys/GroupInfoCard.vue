@@ -603,7 +603,6 @@ function resetPage() {
           </div>
         </n-spin>
       </div>
-      <n-divider style="margin: 0" />
 
       <!-- 详细信息区（可折叠） -->
       <div class="details-section">
@@ -923,6 +922,31 @@ function resetPage() {
 .stats-summary {
   margin-bottom: 12px;
   text-align: center;
+}
+
+.stats-summary :deep(.n-grid-item) {
+  display: flex;
+  justify-content: center;
+}
+
+.stats-summary :deep(.n-statistic) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
+.stats-summary :deep(.n-statistic__label),
+.stats-summary :deep(.n-statistic-value) {
+  width: 100%;
+  text-align: center !important;
+}
+
+.stats-summary :deep(.n-statistic-value) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stats-actions {

@@ -246,12 +246,12 @@ export const keysApi = {
     );
   },
 
-  // 导出密钥
-  exportKeys(groupId: number, status: "all" | "active" | "invalid" = "all"): void {
+  // 构建导出密钥 URL
+  _buildExportUrl(groupId: number, status: "all" | "active" | "invalid"): string | null {
     const authKey = localStorage.getItem("authKey");
     if (!authKey) {
       window.$message.error(i18n.global.t("auth.noAuthKeyFound"));
-      return;
+      return null;
     }
 
     const params = new URLSearchParams({
@@ -263,7 +263,13 @@ export const keysApi = {
       params.append("status", status);
     }
 
-    const url = `${http.defaults.baseURL}/keys/export?${params.toString()}`;
+    return `${http.defaults.baseURL}/keys/export?${params.toString()}`;
+  },
+
+  // 导出密钥到文件
+  exportKeys(groupId: number, status: "all" | "active" | "invalid" = "all"): void {
+    const url = this._buildExportUrl(groupId, status);
+    if (!url) return;
 
     const link = document.createElement("a");
     link.href = url;
@@ -271,6 +277,16 @@ export const keysApi = {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  // 获取导出密钥文本
+  async fetchExportKeysText(groupId: number, status: "all" | "active" | "invalid" = "all"): Promise<string | null> {
+    const url = this._buildExportUrl(groupId, status);
+    if (!url) return null;
+
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return res.text();
   },
 
   // 验证分组密钥

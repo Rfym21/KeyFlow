@@ -84,6 +84,10 @@ const moreOptions = [
   { label: t("keys.exportValidKeys"), key: "copyValid" },
   { label: t("keys.exportInvalidKeys"), key: "copyInvalid" },
   { type: "divider" },
+  { label: t("keys.copyAllKeysToClipboard"), key: "clipboardAll" },
+  { label: t("keys.copyValidKeysToClipboard"), key: "clipboardValid" },
+  { label: t("keys.copyInvalidKeysToClipboard"), key: "clipboardInvalid" },
+  { type: "divider" },
   { label: t("keys.restoreAllInvalidKeys"), key: "restoreAll" },
   {
     label: t("keys.clearAllInvalidKeys"),
@@ -196,6 +200,15 @@ function handleMoreAction(key: string) {
       break;
     case "copyInvalid":
       copyInvalidKeys();
+      break;
+    case "clipboardAll":
+      copyKeysToClipboard("all");
+      break;
+    case "clipboardValid":
+      copyKeysToClipboard("active");
+      break;
+    case "clipboardInvalid":
+      copyKeysToClipboard("invalid");
       break;
     case "restoreAll":
       restoreAllInvalid();
@@ -546,6 +559,25 @@ async function copyInvalidKeys() {
   }
 
   keysApi.exportKeys(props.selectedGroup.id, "invalid");
+}
+
+async function copyKeysToClipboard(status: "all" | "active" | "invalid") {
+  if (!props.selectedGroup?.id) {
+    return;
+  }
+
+  const text = await keysApi.fetchExportKeysText(props.selectedGroup.id, status);
+  if (!text || !text.trim()) {
+    window.$message.warning(t("keys.noKeysToCopy"));
+    return;
+  }
+
+  const success = await copy(text.trim());
+  if (success) {
+    window.$message.success(t("keys.keysCopiedToClipboard"));
+  } else {
+    window.$message.error(t("keys.copyFailedManual"));
+  }
 }
 
 async function restoreAllInvalid() {
