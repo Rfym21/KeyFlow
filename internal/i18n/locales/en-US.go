@@ -127,6 +127,8 @@ var MessagesEnUS = map[string]string{
 	"config.app_url_desc":                     "Base URL of the application, used for constructing group endpoint addresses. System config takes precedence over APP_URL environment variable.",
 	"config.proxy_keys":                       "Global Proxy Keys",
 	"config.proxy_keys_desc":                  "Global proxy keys for accessing all group proxy endpoints. Separate multiple keys with commas.",
+	"config.enable_request_logging":           "Enable Request Logging",
+	"config.enable_request_logging_desc":      "Whether to record proxy request logs. Disabling will stop recording new logs but won't affect existing ones.",
 	"config.log_retention_days":               "Log Retention Days",
 	"config.log_retention_days_desc":          "Number of days to retain request logs in database, 0 to keep logs forever.",
 	"config.log_write_interval":               "Log Write Interval (minutes)",

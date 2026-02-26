@@ -102,6 +102,10 @@ func (s *RequestLogService) Stop(ctx context.Context) {
 
 // Record logs a request to the database and cache
 func (s *RequestLogService) Record(log *models.RequestLog) error {
+	if !s.settingsManager.GetSettings().EnableRequestLogging {
+		return nil
+	}
+
 	log.ID = uuid.NewString()
 	log.Timestamp = time.Now()
 
@@ -296,4 +300,13 @@ func (s *RequestLogService) writeLogsToDB(logs []*models.RequestLog) error {
 
 		return nil
 	})
+}
+
+// ClearAll deletes all request logs from the database and returns the count of deleted records
+func (s *RequestLogService) ClearAll() (int64, error) {
+	result := s.db.Where("1 = 1").Delete(&models.RequestLog{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("failed to clear request logs: %w", result.Error)
+	}
+	return result.RowsAffected, nil
 }

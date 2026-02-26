@@ -127,6 +127,8 @@ var MessagesZhCN = map[string]string{
 	"config.app_url_desc":                     "项目的基础 URL，用于拼接分组终端节点地址。系统配置优先于环境变量 APP_URL。",
 	"config.proxy_keys":                       "全局代理密钥",
 	"config.proxy_keys_desc":                  "全局代理密钥，用于访问所有分组的代理端点。多个密钥请用逗号分隔。",
+	"config.enable_request_logging":           "启用请求日志",
+	"config.enable_request_logging_desc":      "是否记录代理请求日志。关闭后将不再记录新的请求日志，但不影响已有日志。",
 	"config.log_retention_days":               "日志保留时长（天）",
 	"config.log_retention_days_desc":          "请求日志在数据库中的保留天数，0为不清理日志。",
 	"config.log_write_interval":               "日志延迟写入周期（分钟）",

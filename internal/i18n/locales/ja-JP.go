@@ -127,6 +127,8 @@ var MessagesJaJP = map[string]string{
 	"config.app_url_desc":                     "アプリケーションのベースURL。グループエンドポイントアドレスの構築に使用されます。システム設定が環境変数APP_URLより優先されます。",
 	"config.proxy_keys":                       "グローバルプロキシキー",
 	"config.proxy_keys_desc":                  "すべてのグループプロキシエンドポイントにアクセスするためのグローバルプロキシキー。複数のキーはカンマで区切ります。",
+	"config.enable_request_logging":           "リクエストログを有効化",
+	"config.enable_request_logging_desc":      "プロキシリクエストログを記録するかどうか。無効にすると新しいログの記録を停止しますが、既存のログには影響しません。",
 	"config.log_retention_days":               "ログ保存期間（日）",
 	"config.log_retention_days_desc":          "データベースにリクエストログを保持する日数、0でログを永久保存。",
 	"config.log_write_interval":               "ログ書き込み間隔（分）",

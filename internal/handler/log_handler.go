@@ -61,3 +61,21 @@ func (s *Server) ExportLogs(c *gin.Context) {
 		return
 	}
 }
+
+// ClearLogs handles clearing all request logs.
+func (s *Server) ClearLogs(c *gin.Context) {
+	if s.RequestLogService == nil {
+		response.Error(c, app_errors.ErrInternalServer)
+		return
+	}
+
+	deletedCount, err := s.RequestLogService.ClearAll()
+	if err != nil {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrDatabase, err.Error()))
+		return
+	}
+
+	response.SuccessI18n(c, "logs.cleared", gin.H{
+		"deleted_count": deletedCount,
+	})
+}

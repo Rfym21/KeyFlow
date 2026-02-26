@@ -13,6 +13,11 @@ export const logApi = {
     return http.get("/groups");
   },
 
+  // 清除所有日志
+  clearLogs: (): Promise<ApiResponse<{ deleted_count: number }>> => {
+    return http.delete("/logs");
+  },
+
   // 导出日志
   exportLogs: (params: Omit<LogFilter, "page" | "page_size">) => {
     const authKey = localStorage.getItem("authKey");

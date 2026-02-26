@@ -14,6 +14,7 @@ import {
   ReloadOutline,
   Search,
   SettingsOutline,
+  TrashOutline,
 } from "@vicons/ionicons5";
 import {
   NButton,
@@ -33,6 +34,7 @@ import {
   NSpin,
   NTag,
   NTooltip,
+  useDialog,
   useMessage,
 } from "naive-ui";
 import { computed, h, onMounted, reactive, ref, watch, type VNodeChild } from "vue";
@@ -40,8 +42,9 @@ import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
 
-// Message instance
+// Message & Dialog instances
 const message = useMessage();
+const dialog = useDialog();
 
 interface LogRow extends RequestLog {
   is_key_visible: boolean;
@@ -452,6 +455,28 @@ const exportLogs = () => {
   logApi.exportLogs(params);
 };
 
+const clearLogs = () => {
+  dialog.warning({
+    title: t("logs.clearLogs"),
+    content: t("logs.confirmClearLogs"),
+    positiveText: t("common.confirm"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: async () => {
+      try {
+        const res = await logApi.clearLogs();
+        if (res.code === 0) {
+          message.success(t("logs.clearLogsSuccess", { count: res.data?.deleted_count || 0 }));
+          loadLogs();
+        } else {
+          message.error(res.message || t("logs.clearLogsFailed"));
+        }
+      } catch (_error) {
+        message.error(t("logs.clearLogsFailed"));
+      }
+    },
+  });
+};
+
 function changePage(page: number) {
   currentPage.value = page;
 }
@@ -603,6 +628,16 @@ const deselectAllColumns = () => {
                       </n-button>
                     </template>
                     {{ t("logs.exportLogs") }}
+                  </n-tooltip>
+                  <n-tooltip trigger="hover">
+                    <template #trigger>
+                      <n-button ghost type="error" @click="clearLogs">
+                        <template #icon>
+                          <n-icon :component="TrashOutline" />
+                        </template>
+                      </n-button>
+                    </template>
+                    {{ t("logs.clearLogs") }}
                   </n-tooltip>
                   <n-popover trigger="click" placement="bottom-end">
                     <template #trigger>
