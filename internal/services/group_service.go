@@ -146,6 +146,12 @@ type GroupStats struct {
 	Stats30Day  RequestStats `json:"stats_30_day"`
 }
 
+const (
+	groupStatsPeriod24Hour = "24h"
+	groupStatsPeriod7Day   = "7d"
+	groupStatsPeriod30Day  = "30d"
+)
+
 // ConfigOption describes a configurable override exposed to clients.
 type ConfigOption struct {
 	Key          string
@@ -589,6 +595,53 @@ func (s *GroupService) GetGroupStats(ctx context.Context, groupID uint) (*GroupS
 	return s.getStandardGroupStats(ctx, groupID)
 }
 
+func resolveGroupStatsPeriodHours(period string) (int, error) {
+	switch strings.ToLower(strings.TrimSpace(period)) {
+	case groupStatsPeriod24Hour:
+		return 24, nil
+	case groupStatsPeriod7Day:
+		return 7 * 24, nil
+	case groupStatsPeriod30Day:
+		return 30 * 24, nil
+	default:
+		return 0, app_errors.NewAPIError(app_errors.ErrValidation, "invalid stats period, must be one of: 24h, 7d, 30d")
+	}
+}
+
+func groupStatsTimeWindow(hours int) (time.Time, time.Time) {
+	now := time.Now()
+	currentHour := now.Truncate(time.Hour)
+	endTime := currentHour.Add(time.Hour)
+	startTime := endTime.Add(-time.Duration(hours) * time.Hour)
+	return startTime, endTime
+}
+
+// ClearGroupStats clears grouped hourly request statistics for a specific period.
+func (s *GroupService) ClearGroupStats(ctx context.Context, groupID uint, period string) (int64, error) {
+	var group models.Group
+	if err := s.db.WithContext(ctx).First(&group, groupID).Error; err != nil {
+		return 0, app_errors.ParseDBError(err)
+	}
+
+	hours, err := resolveGroupStatsPeriodHours(period)
+	if err != nil {
+		return 0, err
+	}
+
+	startTime, endTime := groupStatsTimeWindow(hours)
+	result := s.db.WithContext(ctx).Model(&models.GroupHourlyStat{}).
+		Where("group_id = ? AND time >= ? AND time < ?", groupID, startTime, endTime).
+		Updates(map[string]any{
+			"success_count": 0,
+			"failure_count": 0,
+		})
+	if result.Error != nil {
+		return 0, app_errors.ParseDBError(result.Error)
+	}
+
+	return result.RowsAffected, nil
+}
+
 // queryGroupHourlyStats queries aggregated hourly statistics from group_hourly_stats table
 func (s *GroupService) queryGroupHourlyStats(ctx context.Context, groupID uint, hours int) (RequestStats, error) {
 	var result struct {
@@ -596,10 +649,7 @@ func (s *GroupService) queryGroupHourlyStats(ctx context.Context, groupID uint, 
 		FailureCount int64
 	}
 
-	now := time.Now()
-	currentHour := now.Truncate(time.Hour)
-	endTime := currentHour.Add(time.Hour) // Include current hour
-	startTime := endTime.Add(-time.Duration(hours) * time.Hour)
+	startTime, endTime := groupStatsTimeWindow(hours)
 
 	if err := s.db.WithContext(ctx).Model(&models.GroupHourlyStat{}).
 		Select("SUM(success_count) as success_count, SUM(failure_count) as failure_count").

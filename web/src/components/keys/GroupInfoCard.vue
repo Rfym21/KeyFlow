@@ -66,6 +66,8 @@ const configOptions = ref<GroupConfigOption[]>([]);
 const showProxyKeys = ref(false);
 const parentAggregateGroups = ref<ParentAggregateGroup[]>([]);
 
+type GroupStatsPeriod = "24h" | "7d" | "30d"
+
 const proxyKeysDisplay = computed(() => {
   if (!props.group?.proxy_keys) {
     return "-";
@@ -173,6 +175,49 @@ async function loadStats() {
   } finally {
     loading.value = false;
   }
+}
+
+function getGroupStatsPeriodLabel(period: GroupStatsPeriod): string {
+  switch (period) {
+    case "24h":
+      return t("keys.stats24Hour")
+    case "7d":
+      return t("keys.stats7Day")
+    case "30d":
+      return t("keys.stats30Day")
+    default:
+      return period
+  }
+}
+
+async function clearGroupStats(period: GroupStatsPeriod) {
+  if (!props.group?.id) {
+    return
+  }
+
+  const periodLabel = getGroupStatsPeriodLabel(period)
+
+  dialog.warning({
+    title: t("keys.clearGroupStats"),
+    content: t("keys.confirmClearGroupStats", { period: periodLabel }),
+    positiveText: t("common.confirm"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: async () => {
+      if (!props.group?.id) {
+        return
+      }
+
+      try {
+        const result = await keysApi.clearGroupStats(props.group.id, period)
+        window.$message.success(
+          t("keys.clearGroupStatsSuccess", { count: result.updated_count, period: periodLabel })
+        )
+        await loadStats()
+      } catch (error) {
+        console.error("Clear group stats failed", error)
+      }
+    },
+  })
 }
 
 async function loadConfigOptions() {
@@ -527,6 +572,35 @@ function resetPage() {
               </n-statistic>
             </n-grid-item>
           </n-grid>
+          <div class="stats-actions" v-if="group">
+            <n-button
+              size="tiny"
+              type="warning"
+              tertiary
+              @click="clearGroupStats('24h')"
+              :disabled="loading"
+            >
+              {{ t("keys.clearStatsShort") }} {{ t("keys.stats24Hour") }}
+            </n-button>
+            <n-button
+              size="tiny"
+              type="warning"
+              tertiary
+              @click="clearGroupStats('7d')"
+              :disabled="loading"
+            >
+              {{ t("keys.clearStatsShort") }} {{ t("keys.stats7Day") }}
+            </n-button>
+            <n-button
+              size="tiny"
+              type="warning"
+              tertiary
+              @click="clearGroupStats('30d')"
+              :disabled="loading"
+            >
+              {{ t("keys.clearStatsShort") }} {{ t("keys.stats30Day") }}
+            </n-button>
+          </div>
         </n-spin>
       </div>
       <n-divider style="margin: 0" />
@@ -849,6 +923,14 @@ function resetPage() {
 .stats-summary {
   margin-bottom: 12px;
   text-align: center;
+}
+
+.stats-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .status-cards-container:deep(.n-card) {

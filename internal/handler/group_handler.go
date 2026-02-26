@@ -319,6 +319,33 @@ func (s *Server) GetGroupStats(c *gin.Context) {
 	response.Success(c, stats)
 }
 
+// GroupStatsClearRequest defines the payload for clearing grouped stats by period.
+type GroupStatsClearRequest struct {
+	Period string `json:"period" binding:"required"`
+}
+
+// ClearGroupStats handles clearing grouped hourly stats by period for a group.
+func (s *Server) ClearGroupStats(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_group_id")
+		return
+	}
+
+	var req GroupStatsClearRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidJSON, err.Error()))
+		return
+	}
+
+	updatedCount, err := s.GroupService.ClearGroupStats(c.Request.Context(), uint(id), req.Period)
+	if s.handleGroupError(c, err) {
+		return
+	}
+
+	response.Success(c, gin.H{"updated_count": updatedCount})
+}
+
 // GroupCopyRequest defines the payload for copying a group.
 type GroupCopyRequest struct {
 	CopyKeys string `json:"copy_keys"` // "none"|"valid_only"|"all"

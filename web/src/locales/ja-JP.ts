@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   auth: {
     noAuthKeyFound: "認証情報が見つかりません、エクスポートできません",
   },
@@ -441,6 +441,9 @@ export default {
     clearRequestCount: "カウントクリア",
     confirmClearRequestCount: "このグループのすべてのキーのリクエスト数とエラー数をクリアしますか？",
     clearRequestCountSuccess: "{count} 件のキーのカウントをクリアしました",
+    clearGroupStats: "グループ統計クリア",
+    confirmClearGroupStats: "このグループの{period}統計をクリアしますか？",
+    clearGroupStatsSuccess: "{period}統計をクリアしました。{count}件を更新しました",
     clearKeyStats: "統計クリア",
     clearStatsShort: "クリア",
     keyStatsCleared: "キー統計がクリアされました",

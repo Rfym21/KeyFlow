@@ -40,6 +40,15 @@ export const keysApi = {
     return res.data;
   },
 
+  // 清除分组指定时间范围的请求与错误统计
+  async clearGroupStats(
+    groupId: number,
+    period: "24h" | "7d" | "30d"
+  ): Promise<{ updated_count: number }> {
+    const res = await http.post(`/groups/${groupId}/stats/clear`, { period });
+    return res.data;
+  },
+
   // 获取分组可配置参数
   async getGroupConfigOptions(): Promise<GroupConfigOption[]> {
     const res = await http.get("/groups/config-options");

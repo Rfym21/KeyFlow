@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   auth: {
     noAuthKeyFound: "未找到认证信息，无法导出",
   },
@@ -425,6 +425,9 @@ export default {
     clearRequestCount: "清空请求数",
     confirmClearRequestCount: "确定要清空该分组所有密钥的请求数和错误数吗？",
     clearRequestCountSuccess: "已清空 {count} 个密钥的请求数",
+    clearGroupStats: "清除分组统计",
+    confirmClearGroupStats: "确定要清除该分组 {period} 的请求与错误统计吗？",
+    clearGroupStatsSuccess: "已清除该分组 {period} 的统计数据，更新 {count} 条记录",
     clearKeyStats: "清除统计",
     clearStatsShort: "清除",
     keyStatsCleared: "密钥统计已清除",
