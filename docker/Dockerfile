@@ -29,7 +29,7 @@ COPY . .
 COPY --from=frontend /build/dist ./web/dist
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -ldflags "-s -w -X gpt-load/internal/version.Version=${VERSION}" -o gpt-load
+    go build -ldflags "-s -w -X key-flow/internal/version.Version=${VERSION}" -o key-flow
 
 
 # Stage 3: Final image (multi-platform)
@@ -40,6 +40,6 @@ RUN apk upgrade --no-cache \
     && apk add --no-cache ca-certificates tzdata \
     && update-ca-certificates
 
-COPY --from=backend /build/gpt-load .
+COPY --from=backend /build/key-flow .
 EXPOSE 3001
-ENTRYPOINT ["/app/gpt-load"]
+ENTRYPOINT ["/app/key-flow"]

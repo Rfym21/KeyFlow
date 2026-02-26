@@ -2,7 +2,7 @@ package channel
 
 import (
 	"context"
-	"gpt-load/internal/models"
+	"key-flow/internal/models"
 	"net/http"
 	"net/url"
 

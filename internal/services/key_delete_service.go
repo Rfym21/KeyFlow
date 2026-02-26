@@ -2,7 +2,7 @@ package services
 
 import (
 	"fmt"
-	"gpt-load/internal/models"
+	"key-flow/internal/models"
 
 	"github.com/sirupsen/logrus"
 )

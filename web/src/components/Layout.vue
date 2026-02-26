@@ -30,7 +30,7 @@ const toggleMenu = () => {
           <div class="brand-icon">
             <img src="@/assets/logo.png" alt="" />
           </div>
-          <h1 v-if="!isMobile" class="brand-title">GPT Load</h1>
+          <h1 v-if="!isMobile" class="brand-title">KeyFlow</h1>
         </div>
 
         <nav v-if="!isMobile" class="header-nav">
@@ -52,7 +52,7 @@ const toggleMenu = () => {
 
     <n-drawer v-model:show="isMenuOpen" :width="260" placement="right">
       <n-drawer-content
-        title="GPT Load"
+        title="KeyFlow"
         body-content-style="padding: 0; display: flex; flex-direction: column; height: 100%;"
       >
         <div style="flex: 1; overflow-y: auto">

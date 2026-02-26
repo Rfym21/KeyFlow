@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	app_errors "gpt-load/internal/errors"
-	"gpt-load/internal/models"
-	"gpt-load/internal/utils"
+	app_errors "key-flow/internal/errors"
+	"key-flow/internal/models"
+	"key-flow/internal/utils"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"

@@ -1,21 +1,21 @@
 {
-  "name": "gpt-load-frontend",
+  "name": "key-flow-frontend",
   "private": true,
   "version": "0.1.0",
-  "description": "GPT Load Balancer Frontend - A modern Vue 3 frontend for GPT load balancing service",
+  "description": "KeyFlow Balancer Frontend - A modern Vue 3 frontend for KeyFlow load balancing service",
   "type": "module",
-  "keywords": ["vue3", "typescript", "vite", "naive-ui", "gpt-load", "frontend"],
-  "author": "tbphp",
+  "keywords": ["vue3", "typescript", "vite", "naive-ui", "key-flow", "frontend"],
+  "author": "Rfym21",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tbphp/gpt-load.git",
+    "url": "https://github.com/Rfym21/KeyFlow.git",
     "directory": "web"
   },
   "bugs": {
-    "url": "https://github.com/tbphp/gpt-load/issues"
+    "url": "https://github.com/Rfym21/KeyFlow/issues"
   },
-  "homepage": "https://github.com/tbphp/gpt-load#readme",
+  "homepage": "https://github.com/Rfym21/KeyFlow#readme",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",

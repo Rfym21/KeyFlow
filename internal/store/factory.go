@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
-	"gpt-load/internal/types"
+	"key-flow/internal/types"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"

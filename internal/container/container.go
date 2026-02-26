@@ -2,19 +2,19 @@
 package container
 
 import (
-	"gpt-load/internal/app"
-	"gpt-load/internal/channel"
-	"gpt-load/internal/config"
-	"gpt-load/internal/db"
-	"gpt-load/internal/encryption"
-	"gpt-load/internal/handler"
-	"gpt-load/internal/httpclient"
-	"gpt-load/internal/keypool"
-	"gpt-load/internal/proxy"
-	"gpt-load/internal/router"
-	"gpt-load/internal/services"
-	"gpt-load/internal/store"
-	"gpt-load/internal/types"
+	"key-flow/internal/app"
+	"key-flow/internal/channel"
+	"key-flow/internal/config"
+	"key-flow/internal/db"
+	"key-flow/internal/encryption"
+	"key-flow/internal/handler"
+	"key-flow/internal/httpclient"
+	"key-flow/internal/keypool"
+	"key-flow/internal/proxy"
+	"key-flow/internal/router"
+	"key-flow/internal/services"
+	"key-flow/internal/store"
+	"key-flow/internal/types"
 
 	"go.uber.org/dig"
 )

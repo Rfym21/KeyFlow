@@ -2,12 +2,12 @@ package router
 
 import (
 	"embed"
-	"gpt-load/internal/handler"
-	"gpt-load/internal/i18n"
-	"gpt-load/internal/middleware"
-	"gpt-load/internal/proxy"
-	"gpt-load/internal/services"
-	"gpt-load/internal/types"
+	"key-flow/internal/handler"
+	"key-flow/internal/i18n"
+	"key-flow/internal/middleware"
+	"key-flow/internal/proxy"
+	"key-flow/internal/services"
+	"key-flow/internal/types"
 	"io/fs"
 	"net/http"
 	"strings"

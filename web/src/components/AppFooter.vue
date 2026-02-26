@@ -17,8 +17,8 @@ const { t } = useI18n()
     <div class="footer-container">
       <div class="footer-main">
         <span class="project-info">
-          <a href="https://github.com/tbphp/gpt-load" target="_blank" rel="noopener noreferrer">
-            <b>GPT-Load</b>
+          <a href="https://github.com/Rfym21/KeyFlow" target="_blank" rel="noopener noreferrer">
+            <b>KeyFlow</b>
           </a>
         </span>
 
@@ -28,7 +28,7 @@ const { t } = useI18n()
           <n-tooltip trigger="hover" placement="top">
             <template #trigger>
               <a
-                href="https://www.gpt-load.com/docs"
+                href="https://github.com/Rfym21/KeyFlow#readme"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="footer-link"
@@ -43,7 +43,7 @@ const { t } = useI18n()
           <n-tooltip trigger="hover" placement="top">
             <template #trigger>
               <a
-                href="https://github.com/tbphp/gpt-load"
+                href="https://github.com/Rfym21/KeyFlow"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="footer-link"
@@ -58,7 +58,7 @@ const { t } = useI18n()
           <n-tooltip trigger="hover" placement="top">
             <template #trigger>
               <a
-                href="https://github.com/tbphp/gpt-load/issues"
+                href="https://github.com/Rfym21/KeyFlow/issues"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="footer-link"
@@ -73,7 +73,7 @@ const { t } = useI18n()
           <n-tooltip trigger="hover" placement="top">
             <template #trigger>
               <a
-                href="https://github.com/tbphp/gpt-load/graphs/contributors"
+                href="https://github.com/Rfym21/KeyFlow/graphs/contributors"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="footer-link"
@@ -88,7 +88,7 @@ const { t } = useI18n()
           <n-tooltip trigger="hover" placement="top">
             <template #trigger>
               <a
-                href="https://t.me/+GHpy5SwEllg3MTUx"
+                href="https://github.com/Rfym21/KeyFlow"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="footer-link"
@@ -107,12 +107,12 @@ const { t } = useI18n()
           <span class="copyright-text">
             &copy; 2025 by
             <a
-              href="https://github.com/tbphp"
+              href="https://github.com/Rfym21"
               target="_blank"
               rel="noopener noreferrer"
               class="author-link"
             >
-              tbphp
+              Rfym21
             </a>
           </span>
           <span class="license-text">MIT License</span>

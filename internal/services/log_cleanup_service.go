@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
-	"gpt-load/internal/config"
-	"gpt-load/internal/models"
+	"key-flow/internal/config"
+	"key-flow/internal/models"
 	"sync"
 	"time"
 

@@ -5,7 +5,7 @@ export type ThemeMode = "auto" | "light" | "dark";
 export type ActualTheme = "light" | "dark";
 
 // 存储键名
-const THEME_KEY = "gpt-load-theme-mode";
+const THEME_KEY = "key-flow-theme-mode";
 
 // 获取初始主题模式
 function getInitialThemeMode(): ThemeMode {

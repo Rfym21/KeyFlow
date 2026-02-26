@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   auth: {
     noAuthKeyFound: "認証情報が見つかりません、エクスポートできません",
   },
@@ -59,7 +59,7 @@
     deselectAll: "選択を解除",
   },
   login: {
-    title: "GPT Load",
+    title: "KeyFlow",
     subtitle: "インテリジェント負荷分散管理プラットフォーム",
     welcome: "おかえりなさい",
     welcomeDesc: "続行するには認証キーを入力してください",
@@ -496,7 +496,7 @@
     parentGroup: "集約グループ",
     parentGroupName: "集約グループ名",
     errorMessage: "エラーメッセージ",
-    exportLogs: "キーのエクスポート",
+    exportLogs: "ログをエクスポート",
     totalRecords: "合計 {total} 件",
     recordsPerPage: "{count}件/ページ",
     previousPage: "前のページ",

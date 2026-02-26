@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gpt-load/internal/i18n/locales"
+	"key-flow/internal/i18n/locales"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"

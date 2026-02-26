@@ -1,15 +1,5 @@
-# GPT-Load
-
-[![Release](https://img.shields.io/github/v/release/tbphp/gpt-load)](https://github.com/tbphp/gpt-load/releases)
-![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
+# KeyFlow
 一款高性能、企业级的 AI API 透明代理服务，专为需要集成多种 AI 服务的企业和开发者设计。基于 Go 语言构建，具备智能密钥管理、负载均衡和全面的监控功能，适用于高并发生产环境。
-
-详细文档请访问 [官方文档](https://www.gpt-load.com/docs?lang=zh)
-
-<a href="https://trendshift.io/repositories/14880" target="_blank"><img src="https://trendshift.io/api/badge/repositories/14880" alt="tbphp%2Fgpt-load | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-<a href="https://hellogithub.com/repository/tbphp/gpt-load" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=554dc4c46eb14092b9b0c56f1eb9021c&claim_uid=Qlh8vzrWJ0HCneG" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
 ## 功能特性
 
@@ -27,7 +17,7 @@
 
 ## 支持的 AI 服务
 
-GPT-Load 作为透明代理服务，完整保留各 AI 服务商的原生 API 格式：
+KeyFlow 作为透明代理服务，完整保留各 AI 服务商的原生 API 格式：
 
 - **OpenAI 格式**：官方 OpenAI API、Azure OpenAI 及其他 OpenAI 兼容服务
 - **Google Gemini 格式**：Gemini Pro、Gemini Pro Vision 等模型的原生 API
@@ -45,11 +35,11 @@ GPT-Load 作为透明代理服务，完整保留各 AI 服务商的原生 API �
 ### 方式一：Docker 快速启动
 
 ```bash
-docker run -d --name gpt-load \
+docker run -d --name key-flow \
     -p 3001:3001 \
     -e AUTH_KEY=your-secure-key-here \
     -v "$(pwd)/data":/app/data \
-    ghcr.io/tbphp/gpt-load:latest
+    ghcr.io/rfym21/key-flow:latest
 ```
 
 > 请将 `your-secure-key-here` 更改为强密码（切勿使用默认值），然后可以登录管理界面：<http://localhost:3001>
@@ -60,11 +50,11 @@ docker run -d --name gpt-load \
 
 ```bash
 # 创建目录
-mkdir -p gpt-load && cd gpt-load
+mkdir -p key-flow && cd key-flow
 
 # 下载配置文件
-wget https://raw.githubusercontent.com/tbphp/gpt-load/refs/heads/main/docker-compose.yml
-wget -O .env https://raw.githubusercontent.com/tbphp/gpt-load/refs/heads/main/.env.example
+wget https://raw.githubusercontent.com/Rfym21/KeyFlow/refs/heads/main/docker-compose.yml
+wget -O .env https://raw.githubusercontent.com/Rfym21/KeyFlow/refs/heads/main/.env.example
 
 # 编辑 .env 文件，将 AUTH_KEY 更改为强密码。切勿使用默认或简单的密钥如 sk-123456。
 
@@ -107,8 +97,8 @@ docker compose pull && docker compose down && docker compose up -d
 
 ```bash
 # 克隆并构建
-git clone https://github.com/tbphp/gpt-load.git
-cd gpt-load
+git clone https://github.com/Rfym21/KeyFlow.git
+cd key-flow
 go mod tidy
 
 # 创建配置
@@ -138,13 +128,11 @@ make run
 - 所有节点必须配置相同的 `AUTH_KEY`、`DATABASE_DSN`、`REDIS_DSN`
 - 主从架构中，从节点必须配置环境变量：`IS_SLAVE=true`
 
-详情请参阅 [集群部署文档](https://www.gpt-load.com/docs/cluster?lang=zh)
-
 ## 配置系统
 
 ### 配置架构概述
 
-GPT-Load 采用双层配置架构：
+KeyFlow 采用双层配置架构：
 
 #### 1. 静态配置（环境变量）
 
@@ -186,7 +174,7 @@ GPT-Load 采用双层配置架构：
 
 | 设置项       | 环境变量       | 默认值               | 说明                                       |
 | ------------ | -------------- | -------------------- | ------------------------------------------ |
-| 数据库连接   | `DATABASE_DSN` | `./data/gpt-load.db` | 数据库连接字符串（DSN）或文件路径          |
+| 数据库连接   | `DATABASE_DSN` | `./data/key-flow.db` | 数据库连接字符串（DSN）或文件路径          |
 | Redis 连接   | `REDIS_DSN`    | -                    | Redis 连接字符串，为空时使用内存存储       |
 
 **性能与 CORS 配置：**
@@ -211,7 +199,7 @@ GPT-Load 采用双层配置架构：
 
 **代理配置：**
 
-GPT-Load 自动读取环境变量中的代理设置，用于向上游 AI 服务商发起请求。
+KeyFlow 自动读取环境变量中的代理设置，用于向上游 AI 服务商发起请求。
 
 | 设置项      | 环境变量       | 默认值 | 说明                               |
 | ----------- | -------------- | ------ | ---------------------------------- |
@@ -265,7 +253,7 @@ GPT-Load 自动读取环境变量中的代理设置，用于向上游 AI 服务�
 
 ## 数据加密迁移
 
-GPT-Load 支持加密存储 API 密钥。您可以随时启用、禁用或更改加密密钥。
+KeyFlow 支持加密存储 API 密钥。您可以随时启用、禁用或更改加密密钥。
 
 <details>
 <summary>查看数据加密迁移详情</summary>
@@ -292,13 +280,13 @@ docker compose down
 
 # 4. 执行迁移命令
 # 启用加密（your-32-char-secret-key 是您的密钥，建议使用 32 位以上的随机字符串）
-docker compose run --rm gpt-load migrate-keys --to "your-32-char-secret-key"
+docker compose run --rm key-flow migrate-keys --to "your-32-char-secret-key"
 
 # 禁用加密
-docker compose run --rm gpt-load migrate-keys --from "your-current-key"
+docker compose run --rm key-flow migrate-keys --from "your-current-key"
 
 # 更换加密密钥
-docker compose run --rm gpt-load migrate-keys --from "old-key" --to "new-32-char-secret-key"
+docker compose run --rm key-flow migrate-keys --from "old-key" --to "new-32-char-secret-key"
 
 # 5. 更新配置文件
 # 编辑 .env 文件，设置 ENCRYPTION_KEY 与 --to 参数一致
@@ -372,7 +360,7 @@ Web 管理界面提供以下功能：
 <details>
 <summary>代理接口调用</summary>
 
-GPT-Load 通过分组名称路由请求到不同的 AI 服务。使用方法如下：
+KeyFlow 通过分组名称路由请求到不同的 AI 服务。使用方法如下：
 
 ### 1. 代理端点格式
 
@@ -543,6 +531,6 @@ response = client.messages.create(
 )
 ```
 
-> **重要说明**：作为透明代理服务，GPT-Load 完整保留各 AI 服务的原生 API 格式和认证方式。您只需替换端点地址并使用管理界面中配置的**代理密钥**即可无缝迁移。
+> **重要说明**：作为透明代理服务，KeyFlow 完整保留各 AI 服务的原生 API 格式和认证方式。您只需替换端点地址并使用管理界面中配置的**代理密钥**即可无缝迁移。
 
 </details>

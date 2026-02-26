@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   auth: {
     noAuthKeyFound: "未找到认证信息，无法导出",
   },
@@ -59,7 +59,7 @@
     deselectAll: "取消选中",
   },
   login: {
-    title: "GPT Load",
+    title: "KeyFlow",
     subtitle: "智能负载均衡管理平台",
     welcome: "欢迎回来",
     welcomeDesc: "请输入您的授权密钥以继续",
@@ -479,7 +479,7 @@
     parentGroup: "聚合分组",
     parentGroupName: "聚合分组名",
     errorMessage: "错误信息",
-    exportLogs: "导出密钥",
+    exportLogs: "导出日志",
     totalRecords: "共 {total} 条记录",
     recordsPerPage: "{count}条/页",
     previousPage: "上一页",

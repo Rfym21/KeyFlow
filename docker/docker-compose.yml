@@ -1,10 +1,10 @@
 services:
-  gpt-load:
+  key-flow:
     image: ghcr.io/rfym21/key-flow:latest
     # build:
     #   context: .
     #   dockerfile: Dockerfile
-    container_name: gpt-load
+    container_name: key-flow
     ports:
       - "${PORT:-3001}:${PORT:-3001}"
     env_file:
@@ -35,11 +35,11 @@ services:
 
   # mysql:
   #   image: mysql:8.2
-  #   container_name: gpt-load-mysql
+  #   container_name: key-flow-mysql
   #   restart: always
   #   environment:
   #     MYSQL_ROOT_PASSWORD: 123456
-  #     MYSQL_DATABASE: gpt-load
+  #     MYSQL_DATABASE: key-flow
   #   volumes:
   #     - ./data/mysql:/var/lib/mysql
   #   healthcheck:
@@ -50,22 +50,22 @@ services:
 
   # postgres:
   #   image: "postgres:16"
-  #   container_name: gpt-load-postgres
+  #   container_name: key-flow-postgres
   #   environment:
   #     POSTGRES_USER: postgres
   #     POSTGRES_PASSWORD: 123456
-  #     POSTGRES_DB: gpt-load
+  #     POSTGRES_DB: key-flow
   #   volumes:
   #     - ./data/postgres:/var/lib/postgresql/data
   #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres -d gpt-load"]
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d key-flow"]
   #     interval: 5s
   #     timeout: 5s
   #     retries: 10
 
   # redis:
   #   image: redis:latest
-  #   container_name: gpt-load-redis
+  #   container_name: key-flow-redis
   #   restart: always
   #   healthcheck:
   #     test: ["CMD", "redis-cli", "ping"]

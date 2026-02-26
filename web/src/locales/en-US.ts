@@ -59,7 +59,7 @@ export default {
     deselectAll: "Deselect All",
   },
   login: {
-    title: "GPT Load",
+    title: "KeyFlow",
     subtitle: "Intelligent Load Balancing Platform",
     welcome: "Welcome Back",
     welcomeDesc: "Please enter your auth key to continue",
@@ -495,7 +495,7 @@ export default {
     parentGroup: "Aggregate Group",
     parentGroupName: "Aggregate Group Name",
     errorMessage: "Error Message",
-    exportLogs: "Export Keys",
+    exportLogs: "Export Logs",
     totalRecords: "Total {total} records",
     recordsPerPage: "{count} per page",
     previousPage: "Previous",

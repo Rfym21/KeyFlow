@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	app_errors "gpt-load/internal/errors"
-	"gpt-load/internal/models"
+	app_errors "key-flow/internal/errors"
+	"key-flow/internal/models"
 	"io"
 	"net/http"
 

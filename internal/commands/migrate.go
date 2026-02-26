@@ -3,13 +3,13 @@ package commands
 import (
 	"flag"
 	"fmt"
-	"gpt-load/internal/container"
-	db "gpt-load/internal/db/migrations"
-	"gpt-load/internal/encryption"
-	"gpt-load/internal/models"
-	"gpt-load/internal/store"
-	"gpt-load/internal/types"
-	"gpt-load/internal/utils"
+	"key-flow/internal/container"
+	db "key-flow/internal/db/migrations"
+	"key-flow/internal/encryption"
+	"key-flow/internal/models"
+	"key-flow/internal/store"
+	"key-flow/internal/types"
+	"key-flow/internal/utils"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -25,12 +25,12 @@ func RunMigrateKeys(args []string) {
 
 	// Set custom usage message
 	migrateCmd.Usage = func() {
-		fmt.Println("GPT-Load Key Migration Tool")
+		fmt.Println("KeyFlow Key Migration Tool")
 		fmt.Println()
 		fmt.Println("Usage:")
-		fmt.Println("  Enable encryption: gpt-load migrate-keys --to new-key")
-		fmt.Println("  Disable encryption: gpt-load migrate-keys --from old-key")
-		fmt.Println("  Change key: gpt-load migrate-keys --from old-key --to new-key")
+		fmt.Println("  Enable encryption: key-flow migrate-keys --to new-key")
+		fmt.Println("  Disable encryption: key-flow migrate-keys --from old-key")
+		fmt.Println("  Change key: key-flow migrate-keys --from old-key --to new-key")
 		fmt.Println()
 		fmt.Println("Arguments:")
 		migrateCmd.PrintDefaults()

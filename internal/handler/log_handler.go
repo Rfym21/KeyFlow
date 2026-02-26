@@ -2,10 +2,10 @@ package handler
 
 import (
 	"fmt"
-	app_errors "gpt-load/internal/errors"
-	"gpt-load/internal/i18n"
-	"gpt-load/internal/models"
-	"gpt-load/internal/response"
+	app_errors "key-flow/internal/errors"
+	"key-flow/internal/i18n"
+	"key-flow/internal/models"
+	"key-flow/internal/response"
 	"log"
 	"time"
 

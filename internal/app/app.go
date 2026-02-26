@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"gpt-load/internal/config"
-	db "gpt-load/internal/db/migrations"
-	"gpt-load/internal/i18n"
-	"gpt-load/internal/keypool"
-	"gpt-load/internal/models"
-	"gpt-load/internal/proxy"
-	"gpt-load/internal/services"
-	"gpt-load/internal/store"
-	"gpt-load/internal/types"
+	"key-flow/internal/config"
+	db "key-flow/internal/db/migrations"
+	"key-flow/internal/i18n"
+	"key-flow/internal/keypool"
+	"key-flow/internal/models"
+	"key-flow/internal/proxy"
+	"key-flow/internal/services"
+	"key-flow/internal/store"
+	"key-flow/internal/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -148,7 +148,7 @@ func (a *App) Start() error {
 
 	// Start HTTP server in a new goroutine
 	go func() {
-		logrus.Info("GPT-Load proxy server started successfully")
+		logrus.Info("KeyFlow proxy server started successfully")
 		logrus.Infof("Server address: http://%s:%d", serverConfig.Host, serverConfig.Port)
 		logrus.Info("")
 		if err := a.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {

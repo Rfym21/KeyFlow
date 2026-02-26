@@ -27,6 +27,6 @@ func ValidatePasswordStrength(password, fieldName string) {
 
 // DeriveAESKey derives a 32-byte AES key from password using PBKDF2
 func DeriveAESKey(password string) []byte {
-	salt := []byte("gpt-load-encryption-v1")
+	salt := []byte("key-flow-encryption-v1")
 	return pbkdf2.Key([]byte(password), salt, 100000, 32, sha256.New)
 }

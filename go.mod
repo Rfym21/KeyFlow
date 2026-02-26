@@ -1,4 +1,4 @@
-module gpt-load
+module key-flow
 
 go 1.23.0
 

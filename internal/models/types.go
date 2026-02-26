@@ -1,7 +1,7 @@
 package models
 
 import (
-	"gpt-load/internal/types"
+	"key-flow/internal/types"
 	"time"
 
 	"gorm.io/datatypes"

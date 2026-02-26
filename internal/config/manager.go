@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"gpt-load/internal/errors"
-	"gpt-load/internal/types"
-	"gpt-load/internal/utils"
+	"key-flow/internal/errors"
+	"key-flow/internal/types"
+	"key-flow/internal/utils"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -99,7 +99,7 @@ func (m *Manager) ReloadConfig() error {
 			FilePath:   utils.GetEnvOrDefault("LOG_FILE_PATH", "./data/logs/app.log"),
 		},
 		Database: types.DatabaseConfig{
-			DSN: utils.GetEnvOrDefault("DATABASE_DSN", "./data/gpt-load.db"),
+			DSN: utils.GetEnvOrDefault("DATABASE_DSN", "./data/key-flow.db"),
 		},
 		RedisDSN:      os.Getenv("REDIS_DSN"),
 		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),

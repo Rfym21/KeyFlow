@@ -2,8 +2,8 @@ package utils
 
 import (
 	"fmt"
-	"gpt-load/internal/models"
-	"gpt-load/internal/types"
+	"key-flow/internal/models"
+	"key-flow/internal/types"
 	"os"
 	"reflect"
 	"strconv"

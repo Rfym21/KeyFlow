@@ -631,7 +631,7 @@ const deselectAllColumns = () => {
                   </n-tooltip>
                   <n-tooltip trigger="hover">
                     <template #trigger>
-                      <n-button ghost type="error" @click="clearLogs">
+                      <n-button ghost @click="clearLogs">
                         <template #icon>
                           <n-icon :component="TrashOutline" />
                         </template>
