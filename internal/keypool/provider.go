@@ -969,14 +969,30 @@ func (p *KeyProvider) ResetSingleKeyWeight(keyID uint) error {
 }
 
 // SelectKeyWithCacheHit 支持缓存命中的key选择（含 Session ID 绑定 + 动态 TTL）
-func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, headers http.Header, enableCacheHit bool) (*models.APIKey, error) {
+// 仅在 Anthropic+Claude 模型且请求体包含 cache_control 标记时才要求 cache_control，其他渠道直接启用
+func (p *KeyProvider) SelectKeyWithCacheHit(groupID uint, bodyBytes []byte, headers http.Header, enableCacheHit bool, channelType string) (*models.APIKey, error) {
 	// 没开启缓存命中增强，权重不会变化，直接使用简单轮询，跳过 O(n) 权重计算
 	if !enableCacheHit {
 		activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
 		return p.selectKeyByRotate(groupID, activeKeysListKey)
 	}
 
-	ttl := DetectCacheTTL(bodyBytes)
+	// Anthropic+Claude 模型需要请求体包含 cache_control 标记才启用缓存命中增强
+	if RequiresCacheControl(channelType, bodyBytes) {
+		ccResult := DetectCacheControl(bodyBytes)
+		if !ccResult.Found {
+			activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
+			return p.selectKeyByRotate(groupID, activeKeysListKey)
+		}
+		return p.selectKeyWithTTL(groupID, bodyBytes, headers, ccResult.TTL)
+	}
+
+	// 非 Anthropic+Claude：直接启用缓存命中增强，使用默认 TTL
+	return p.selectKeyWithTTL(groupID, bodyBytes, headers, defaultCacheTTL)
+}
+
+// selectKeyWithTTL 使用指定 TTL 执行缓存命中增强选 key
+func (p *KeyProvider) selectKeyWithTTL(groupID uint, bodyBytes []byte, headers http.Header, ttl time.Duration) (*models.APIKey, error) {
 	sessionID := ExtractSessionID(bodyBytes, headers)
 
 	// 有 Session ID → session 绑定优先

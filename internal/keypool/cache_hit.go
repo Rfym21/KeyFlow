@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -113,7 +114,7 @@ func ExtractMessages(bodyBytes []byte) ([]json.RawMessage, int) {
 }
 
 // ExtractSessionID 从请求头和请求体中提取 Session ID
-// 优先级：Header session_id → Header x-session-id → Body metadata.session_id → Body prompt_cache_key → Body previous_response_id
+// 优先级：Header session_id → Header x-session-id → Body metadata(SHA-256 hash) → Body prompt_cache_key → Body previous_response_id
 func ExtractSessionID(bodyBytes []byte, headers http.Header) string {
 	// 1. Header: session_id
 	if id := headers.Get("session_id"); validateSessionID(id) {
@@ -126,20 +127,19 @@ func ExtractSessionID(bodyBytes []byte, headers http.Header) string {
 
 	// 解析 body 提取候选值
 	var body struct {
-		Metadata struct {
-			SessionID string `json:"session_id"`
-		} `json:"metadata"`
-		PromptCacheKey     string `json:"prompt_cache_key"`
-		PreviousResponseID string `json:"previous_response_id"`
+		Metadata           json.RawMessage `json:"metadata"`
+		PromptCacheKey     string          `json:"prompt_cache_key"`
+		PreviousResponseID string          `json:"previous_response_id"`
 	}
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
 		return ""
 	}
 
-	// 3. Body: metadata.session_id
-	if validateSessionID(body.Metadata.SessionID) {
-		return body.Metadata.SessionID
+	// 3. Body: metadata（不区分格式，直接对原始内容取 SHA-256 作为 session ID）
+	if id := hashRawMetadata(body.Metadata); validateSessionID(id) {
+		return id
 	}
+
 	// 4. Body: prompt_cache_key
 	if validateSessionID(body.PromptCacheKey) {
 		return body.PromptCacheKey
@@ -152,39 +152,107 @@ func ExtractSessionID(bodyBytes []byte, headers http.Header) string {
 	return ""
 }
 
-// DetectCacheTTL 根据 messages 中 cache_control 标记检测缓存 TTL
-// ephemeral + ttl="1h" → 1小时，其他有 cache_control → 5分钟，无 cache_control → 5分钟（默认）
-func DetectCacheTTL(bodyBytes []byte) time.Duration {
-	var body struct {
-		Messages []struct {
-			Content json.RawMessage `json:"content"`
-		} `json:"messages"`
+// hashRawMetadata 对 metadata 原始内容取 SHA-256 作为 session ID
+func hashRawMetadata(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return ""
 	}
-	if err := json.Unmarshal(bodyBytes, &body); err != nil {
-		return defaultCacheTTL
+	hash := sha256.Sum256(raw)
+	return "meta_" + hex.EncodeToString(hash[:16])
+}
+
+// CacheControlResult 缓存控制检测结果
+type CacheControlResult struct {
+	Found bool          // 请求体中是否存在 cache_control 标记
+	TTL   time.Duration // 缓存 TTL
+}
+
+// DetectCacheControl 检测请求体中是否存在 cache_control 标记并返回对应 TTL
+// 检测范围：system、messages.content、tools、顶层 cache_control
+// ephemeral + ttl="1h" → 1小时，其他有 cache_control → 5分钟，无 cache_control → Found=false
+func DetectCacheControl(bodyBytes []byte) CacheControlResult {
+	// cacheControlBlock 用于解析含 cache_control 字段的 block
+	type cacheControlBlock struct {
+		CacheControl *struct {
+			Type string `json:"type"`
+			TTL  string `json:"ttl"`
+		} `json:"cache_control"`
 	}
 
-	for _, msg := range body.Messages {
-		// content 可能是字符串或数组
-		var blocks []struct {
-			CacheControl *struct {
-				Type string `json:"type"`
-				TTL  string `json:"ttl"`
-			} `json:"cache_control"`
+	// bestResult 记录最长 TTL 的结果
+	best := CacheControlResult{Found: false, TTL: defaultCacheTTL}
+
+	// checkBlock 检查单个 block 的 cache_control
+	checkBlock := func(cc *struct {
+		Type string `json:"type"`
+		TTL  string `json:"ttl"`
+	}) {
+		if cc == nil {
+			return
 		}
-		if err := json.Unmarshal(msg.Content, &blocks); err != nil {
-			continue
+		best.Found = true
+		if cc.Type == "ephemeral" && cc.TTL == "1h" {
+			best.TTL = longCacheTTL
 		}
-		for _, block := range blocks {
-			if block.CacheControl != nil {
-				if block.CacheControl.Type == "ephemeral" && block.CacheControl.TTL == "1h" {
-					return longCacheTTL
-				}
+	}
+
+	// checkContentBlocks 检查 content（可能是字符串或数组）
+	checkContentBlocks := func(content json.RawMessage) {
+		var blocks []cacheControlBlock
+		if json.Unmarshal(content, &blocks) == nil {
+			for _, b := range blocks {
+				checkBlock(b.CacheControl)
 			}
 		}
 	}
 
-	return defaultCacheTTL
+	var body struct {
+		CacheControl *struct {
+			Type string `json:"type"`
+			TTL  string `json:"ttl"`
+		} `json:"cache_control"`
+		System   json.RawMessage `json:"system"`
+		Messages []struct {
+			Content json.RawMessage `json:"content"`
+		} `json:"messages"`
+		Tools []cacheControlBlock `json:"tools"`
+	}
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		return best
+	}
+
+	// 1. 顶层 cache_control（自动缓存模式）
+	checkBlock(body.CacheControl)
+
+	// 2. system（可能是字符串或 content block 数组）
+	checkContentBlocks(body.System)
+
+	// 3. messages.content
+	for _, msg := range body.Messages {
+		checkContentBlocks(msg.Content)
+	}
+
+	// 4. tools
+	for _, tool := range body.Tools {
+		checkBlock(tool.CacheControl)
+	}
+
+	return best
+}
+
+// RequiresCacheControl 判断是否需要请求体包含 cache_control 才启用缓存命中增强
+// 仅 Anthropic 渠道且 model 含 "claude" 时需要
+func RequiresCacheControl(channelType string, bodyBytes []byte) bool {
+	if !strings.EqualFold(channelType, "anthropic") {
+		return false
+	}
+	var body struct {
+		Model string `json:"model"`
+	}
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(body.Model), "claude")
 }
 
 // validateSessionID 校验 Session ID 格式
