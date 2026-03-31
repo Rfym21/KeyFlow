@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { keysApi } from "@/api/keys";
+import type { KeyTestResultItem } from "@/types/models";
 import { maskKey } from "@/utils/display";
 import {
   CheckmarkCircle,
@@ -19,16 +20,9 @@ import {
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
-interface TestResultItem {
-  key_value: string;
-  is_valid: boolean;
-  error: string;
-  status_code: number;
-}
-
 interface Props {
   show: boolean;
-  results: TestResultItem[];
+  results: KeyTestResultItem[];
   totalDuration: number;
   groupId: number;
 }
@@ -63,7 +57,7 @@ watch(
 const groupedResults = computed(() => {
   const groups = new Map<
     string,
-    { groupKey: string; label: string; type: "success" | "error"; statusCode: number; items: TestResultItem[] }
+    { groupKey: string; label: string; type: "success" | "error"; statusCode: number; items: KeyTestResultItem[] }
   >();
 
   for (const item of props.results) {
@@ -124,11 +118,17 @@ function isGroupExpanded(groupKey: string): boolean {
   return expandedGroups.value.has(groupKey);
 }
 
-function toggleSelectAll(items: TestResultItem[]) {
-  const newSelected = new Set(selectedKeys.value);
-  const allSelected = items.every((item) => newSelected.has(item.key_value));
+function getSelectableItems(items: KeyTestResultItem[]) {
+  return items.filter((item) => Boolean(item.key_value?.trim()));
+}
 
-  for (const item of items) {
+function toggleSelectAll(items: KeyTestResultItem[]) {
+  const newSelected = new Set(selectedKeys.value);
+  const selectableItems = getSelectableItems(items);
+  const allSelected =
+    selectableItems.length > 0 && selectableItems.every((item) => newSelected.has(item.key_value));
+
+  for (const item of selectableItems) {
     if (allSelected) {
       newSelected.delete(item.key_value);
     } else {
@@ -138,16 +138,22 @@ function toggleSelectAll(items: TestResultItem[]) {
   selectedKeys.value = newSelected;
 }
 
-function isGroupAllSelected(items: TestResultItem[]): boolean {
-  return items.length > 0 && items.every((item) => selectedKeys.value.has(item.key_value));
+function isGroupAllSelected(items: KeyTestResultItem[]): boolean {
+  const selectableItems = getSelectableItems(items);
+  return selectableItems.length > 0 && selectableItems.every((item) => selectedKeys.value.has(item.key_value));
 }
 
-function isGroupIndeterminate(items: TestResultItem[]): boolean {
-  const selectedCount = items.filter((item) => selectedKeys.value.has(item.key_value)).length;
-  return selectedCount > 0 && selectedCount < items.length;
+function isGroupIndeterminate(items: KeyTestResultItem[]): boolean {
+  const selectableItems = getSelectableItems(items);
+  const selectedCount = selectableItems.filter((item) => selectedKeys.value.has(item.key_value)).length;
+  return selectedCount > 0 && selectedCount < selectableItems.length;
 }
 
 function toggleKeySelection(keyValue: string) {
+  if (!keyValue.trim()) {
+    return;
+  }
+
   const newSelected = new Set(selectedKeys.value);
   if (newSelected.has(keyValue)) {
     newSelected.delete(keyValue);
@@ -223,6 +229,7 @@ function formatDuration(ms: number): string {
               <n-checkbox
                 :checked="isGroupAllSelected(group.items)"
                 :indeterminate="isGroupIndeterminate(group.items)"
+                :disabled="getSelectableItems(group.items).length === 0"
                 @update:checked="toggleSelectAll(group.items)"
                 @click.stop
               />
@@ -244,17 +251,18 @@ function formatDuration(ms: number): string {
           <!-- 分组内 Key 列表 -->
           <div v-if="isGroupExpanded(group.groupKey)" class="group-items">
             <div
-              v-for="item in group.items"
-              :key="item.key_value"
+              v-for="(item, index) in group.items"
+              :key="item.key_value || `${group.groupKey}-${index}`"
               class="key-item"
               @click="toggleKeySelection(item.key_value)"
             >
               <n-checkbox
                 :checked="selectedKeys.has(item.key_value)"
+                :disabled="!item.key_value"
                 @update:checked="toggleKeySelection(item.key_value)"
                 @click.stop
               />
-              <span class="key-value">{{ maskKey(item.key_value) }}</span>
+              <span class="key-value">{{ item.key_value ? maskKey(item.key_value) : "--" }}</span>
               <n-tooltip v-if="item.error" trigger="hover" :style="{ maxWidth: '400px' }">
                 <template #trigger>
                   <span class="error-hint">

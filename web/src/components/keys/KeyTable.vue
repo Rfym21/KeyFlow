@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { keysApi } from "@/api/keys";
-import type { APIKey, Group, KeyStatus } from "@/types/models";
+import type { APIKey, Group, KeyStatus, KeyTestResultItem, KeyValidationResult } from "@/types/models";
 import { appState, triggerSyncOperationRefresh } from "@/utils/app-state";
 import { copy } from "@/utils/clipboard";
 import { getGroupDisplayName, maskKey } from "@/utils/display";
@@ -104,8 +104,6 @@ const moreOptions = [
   { label: t("keys.validateAllKeys"), key: "validateAll" },
   { label: t("keys.validateValidKeys"), key: "validateActive" },
   { label: t("keys.validateInvalidKeys"), key: "validateInvalid" },
-  { type: "divider" },
-  { label: t("keys.batchTest"), key: "batchTest" },
 ];
 
 let testingMsg: MessageReactive | null = null;
@@ -117,7 +115,7 @@ const deleteDialogShow = ref(false);
 
 // 测试结果弹窗相关
 const testResultDialogShow = ref(false);
-const testResults = ref<{ key_value: string; is_valid: boolean; error: string; status_code: number }[]>([]);
+const testResults = ref<KeyTestResultItem[]>([]);
 const testTotalDuration = ref(0);
 
 // 备注编辑相关
@@ -169,10 +167,8 @@ watch([sortBy, sortOrder], async () => {
 // 监听任务完成事件，自动刷新密钥列表
 watch(
   () => appState.groupDataRefreshTrigger,
-  () => {
-    // 检查是否需要刷新当前分组的密钥列表
+  async () => {
     if (appState.lastCompletedTask && props.selectedGroup) {
-      // 通过分组名称匹配
       const isCurrentGroup = appState.lastCompletedTask.groupName === props.selectedGroup.name;
 
       const shouldRefresh =
@@ -181,8 +177,15 @@ watch(
         appState.lastCompletedTask.taskType === "KEY_DELETE";
 
       if (isCurrentGroup && shouldRefresh) {
-        // 刷新当前分组的密钥列表
-        loadKeys();
+        await loadKeys();
+      }
+
+      if (
+        isCurrentGroup &&
+        appState.lastCompletedTask.taskType === "KEY_VALIDATION" &&
+        appState.lastCompletedTask.result
+      ) {
+        openValidationResultDialog(appState.lastCompletedTask.result as KeyValidationResult);
       }
     }
   }
@@ -235,9 +238,6 @@ function handleMoreAction(key: string) {
       break;
     case "clearAll":
       clearAll();
-      break;
-    case "batchTest":
-      batchTestKeys();
       break;
   }
 }
@@ -295,11 +295,21 @@ async function testKey(_key: KeyRow) {
 
   try {
     const response = await keysApi.testKeys(props.selectedGroup.id, _key.key_value);
-    testResults.value = response.results || [];
-    testTotalDuration.value = response.total_duration;
-    testResultDialogShow.value = true;
+    const result = response.results?.[0];
+    if (result?.is_valid) {
+      window.$message.success(
+        t("keys.testSuccess", {
+          duration: formatDuration(response.total_duration),
+        })
+      );
+    } else {
+      window.$message.error(result?.error || t("keys.testFailed"), {
+        keepAliveOnHover: true,
+        duration: 5000,
+        closable: true,
+      });
+    }
     await loadKeys();
-    // 触发同步操作刷新
     triggerSyncOperationRefresh(props.selectedGroup.name, "TEST_SINGLE");
   } catch (_error) {
     console.error("Test failed");
@@ -309,37 +319,37 @@ async function testKey(_key: KeyRow) {
   }
 }
 
-/**
- * 批量测试当前分组所有密钥
- */
-async function batchTestKeys() {
-  if (!props.selectedGroup?.id || testingMsg) {
+function formatDuration(ms: number): string {
+  if (ms < 0) {
+    return "0ms";
+  }
+
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const milliseconds = ms % 1000;
+
+  let result = "";
+  if (minutes > 0) {
+    result += `${minutes}m`;
+  }
+  if (seconds > 0) {
+    result += `${seconds}s`;
+  }
+  if (milliseconds > 0 || result === "") {
+    result += `${milliseconds}ms`;
+  }
+
+  return result;
+}
+
+function openValidationResultDialog(result: KeyValidationResult) {
+  if (!result.results?.length) {
     return;
   }
 
-  // 获取当前分组所有密钥的 key_value
-  const allKeyValues = keys.value.map((k) => k.key_value).filter(Boolean);
-  if (allKeyValues.length === 0) {
-    return;
-  }
-
-  testingMsg = window.$message.info(t("keys.testingKey"), {
-    duration: 0,
-  });
-
-  try {
-    const response = await keysApi.testKeys(props.selectedGroup.id, allKeyValues.join("\n"));
-    testResults.value = response.results || [];
-    testTotalDuration.value = response.total_duration;
-    testResultDialogShow.value = true;
-    await loadKeys();
-    triggerSyncOperationRefresh(props.selectedGroup.name, "BATCH_TEST");
-  } catch (_error) {
-    console.error("Batch test failed");
-  } finally {
-    testingMsg?.destroy();
-    testingMsg = null;
-  }
+  testResults.value = result.results;
+  testTotalDuration.value = result.total_duration || 0;
+  testResultDialogShow.value = true;
 }
 
 function toggleKeyVisibility(key: KeyRow) {
@@ -641,6 +651,9 @@ async function validateKeys(status: "all" | "active" | "invalid") {
   });
 
   try {
+    testResultDialogShow.value = false;
+    testResults.value = [];
+    testTotalDuration.value = 0;
     await keysApi.validateGroupKeys(props.selectedGroup.id, status === "all" ? undefined : status);
     localStorage.removeItem("last_closed_task");
     appState.taskPollingTrigger++;

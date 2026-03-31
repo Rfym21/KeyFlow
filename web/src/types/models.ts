@@ -119,10 +119,19 @@ export interface RequestStats {
 
 export type TaskType = "KEY_VALIDATION" | "KEY_IMPORT" | "KEY_DELETE";
 
+export interface KeyTestResultItem {
+  key_value: string;
+  is_valid: boolean;
+  error: string;
+  status_code: number;
+}
+
 export interface KeyValidationResult {
   invalid_keys: number;
   total_keys: number;
   valid_keys: number;
+  total_duration?: number;
+  results?: KeyTestResultItem[];
 }
 
 export interface KeyImportResult {

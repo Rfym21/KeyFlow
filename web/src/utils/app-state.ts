@@ -1,3 +1,4 @@
+import type { KeyDeleteResult, KeyImportResult, KeyValidationResult, TaskType } from "@/types/models";
 import { reactive } from "vue";
 
 interface AppState {
@@ -7,8 +8,9 @@ interface AppState {
   syncOperationTrigger: number;
   lastCompletedTask?: {
     groupName: string;
-    taskType: string;
+    taskType: TaskType;
     finishedAt: string;
+    result?: KeyValidationResult | KeyImportResult | KeyDeleteResult;
   };
   lastSyncOperation?: {
     groupName: string;

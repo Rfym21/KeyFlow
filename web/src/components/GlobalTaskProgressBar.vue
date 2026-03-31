@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { keysApi } from "@/api/keys";
-import type { TaskInfo } from "@/types/models";
+import type { KeyDeleteResult, KeyImportResult, KeyValidationResult, TaskInfo } from "@/types/models";
 import { appState } from "@/utils/app-state";
 import { NButton, NCard, NProgress, NText, useMessage } from "naive-ui";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
@@ -51,20 +51,20 @@ async function pollOnce() {
         if (lastTask !== task.finished_at) {
           let msg = t("task.completed");
           if (task.task_type === "KEY_VALIDATION") {
-            const result = task.result as import("@/types/models").KeyValidationResult;
+            const result = task.result as KeyValidationResult;
             msg = t("task.validationCompleted", {
               total: result.total_keys,
               valid: result.valid_keys,
               invalid: result.invalid_keys,
             });
           } else if (task.task_type === "KEY_IMPORT") {
-            const result = task.result as import("@/types/models").KeyImportResult;
+            const result = task.result as KeyImportResult;
             msg = t("task.importCompleted", {
               added: result.added_count,
               ignored: result.ignored_count,
             });
           } else if (task.task_type === "KEY_DELETE") {
-            const result = task.result as import("@/types/models").KeyDeleteResult;
+            const result = task.result as KeyDeleteResult;
             msg = t("task.deleteCompleted", {
               deleted: result.deleted_count,
               ignored: result.ignored_count,
@@ -85,6 +85,7 @@ async function pollOnce() {
               groupName: task.group_name,
               taskType: task.task_type,
               finishedAt: task.finished_at,
+              result: task.result,
             };
             appState.groupDataRefreshTrigger++;
           }

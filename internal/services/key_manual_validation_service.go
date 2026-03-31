@@ -16,9 +16,11 @@ import (
 
 // ManualValidationResult holds the result of a manual validation task.
 type ManualValidationResult struct {
-	TotalKeys   int `json:"total_keys"`
-	ValidKeys   int `json:"valid_keys"`
-	InvalidKeys int `json:"invalid_keys"`
+	TotalKeys     int                     `json:"total_keys"`
+	ValidKeys     int                     `json:"valid_keys"`
+	InvalidKeys   int                     `json:"invalid_keys"`
+	TotalDuration int64                   `json:"total_duration"`
+	Results       []keypool.KeyTestResult `json:"results"`
 }
 
 // KeyManualValidationService handles user-initiated key validation for a group.
@@ -80,7 +82,8 @@ func (s *KeyManualValidationService) runValidation(group *models.Group, keys []m
 	logrus.WithFields(logFields).Info("Starting manual validation")
 
 	jobs := make(chan models.APIKey, len(keys))
-	results := make(chan bool, len(keys))
+	results := make(chan keypool.KeyTestResult, len(keys))
+	startedAt := time.Now()
 
 	concurrency := group.EffectiveConfig.KeyValidationConcurrency
 
@@ -103,10 +106,12 @@ func (s *KeyManualValidationService) runValidation(group *models.Group, keys []m
 	validCount := 0
 	processedCount := 0
 	lastUpdateTime := time.Now()
+	validationResults := make([]keypool.KeyTestResult, 0, len(keys))
 
-	for isValid := range results {
+	for result := range results {
 		processedCount++
-		if isValid {
+		validationResults = append(validationResults, result)
+		if result.IsValid {
 			validCount++
 		}
 
@@ -125,9 +130,11 @@ func (s *KeyManualValidationService) runValidation(group *models.Group, keys []m
 	}
 
 	result := ManualValidationResult{
-		TotalKeys:   len(keys),
-		ValidKeys:   validCount,
-		InvalidKeys: len(keys) - validCount,
+		TotalKeys:     len(keys),
+		ValidKeys:     validCount,
+		InvalidKeys:   len(keys) - validCount,
+		TotalDuration: time.Since(startedAt).Milliseconds(),
+		Results:       validationResults,
 	}
 
 	// End the task and store the final result
@@ -138,14 +145,19 @@ func (s *KeyManualValidationService) runValidation(group *models.Group, keys []m
 }
 
 // validationResult 包含验证结果信息
-func (s *KeyManualValidationService) validationWorker(wg *sync.WaitGroup, group *models.Group, jobs <-chan models.APIKey, results chan<- bool) {
+func (s *KeyManualValidationService) validationWorker(wg *sync.WaitGroup, group *models.Group, jobs <-chan models.APIKey, results chan<- keypool.KeyTestResult) {
 	defer wg.Done()
 	for key := range jobs {
 		// Decrypt the key before validation
 		decryptedKey, err := s.EncryptionSvc.Decrypt(key.KeyValue)
 		if err != nil {
 			logrus.WithError(err).WithField("key_id", key.ID).Error("Manual validation: Failed to decrypt key for validation, marking as invalid")
-			results <- false
+			results <- keypool.KeyTestResult{
+				KeyValue:   "",
+				IsValid:    false,
+				Error:      "Failed to decrypt key for validation.",
+				StatusCode: 0,
+			}
 			continue
 		}
 
@@ -153,7 +165,15 @@ func (s *KeyManualValidationService) validationWorker(wg *sync.WaitGroup, group 
 		keyForValidation := key
 		keyForValidation.KeyValue = decryptedKey
 
-		isValid, _, _ := s.Validator.ValidateSingleKey(&keyForValidation, group, true) // 手动验证，失败直接禁用
-		results <- isValid
+		isValid, statusCode, validationErr := s.Validator.ValidateSingleKey(&keyForValidation, group, true)
+		result := keypool.KeyTestResult{
+			KeyValue:   keyForValidation.KeyValue,
+			IsValid:    isValid,
+			StatusCode: statusCode,
+		}
+		if validationErr != nil {
+			result.Error = validationErr.Error()
+		}
+		results <- result
 	}
 }
