@@ -15,7 +15,6 @@ import {
   NIcon,
   NModal,
   NTooltip,
-  NSpin,
 } from "naive-ui";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -125,7 +124,7 @@ function isGroupExpanded(groupKey: string): boolean {
   return expandedGroups.value.has(groupKey);
 }
 
-function toggleSelectAll(groupKey: string, items: TestResultItem[]) {
+function toggleSelectAll(items: TestResultItem[]) {
   const newSelected = new Set(selectedKeys.value);
   const allSelected = items.every((item) => newSelected.has(item.key_value));
 
@@ -168,15 +167,6 @@ async function disableSelected() {
 
   operationLoading.value = true;
   try {
-    const promises = Array.from(selectedKeys.value).map(async (keyValue) => {
-      const result = props.results.find((r) => r.key_value === keyValue);
-      if (!result) return;
-      // 通过 key_value 查找对应的 key id，这里直接用 delete API 是不行的
-      // 使用 restoreKeys 的反向操作，但实际上没有批量禁用 API
-      // 所以用 test key 时测试失败已经自动禁用了，这里只处理测试成功但用户想手动禁用的
-    });
-    // 由于手动测试失败已自动禁用，用户主要需求是禁用选中的（包括成功的）key
-    // 使用 delete-multiple API 实现批量操作
     const keysText = Array.from(selectedKeys.value).join("\n");
     await keysApi.deleteKeys(props.groupId, keysText);
     window.$message.success(t("keys.testResultOperationSuccess", { count: selectedKeys.value.size }));
@@ -233,7 +223,7 @@ function formatDuration(ms: number): string {
               <n-checkbox
                 :checked="isGroupAllSelected(group.items)"
                 :indeterminate="isGroupIndeterminate(group.items)"
-                @update:checked="toggleSelectAll(group.groupKey, group.items)"
+                @update:checked="toggleSelectAll(group.items)"
                 @click.stop
               />
               <n-icon

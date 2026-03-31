@@ -452,7 +452,6 @@ export default {
     testResultOperationSuccess: "已成功操作 {count} 个密钥",
     batchTest: "批量测试",
     loadGroupsFailed: "加载分组列表失败",
-    loadSubGroupsFailed: "加载子分组失败",
   },
   subGroups: {
     addSubGroup: "添加子分组",

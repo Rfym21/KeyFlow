@@ -468,7 +468,6 @@ export default {
     testResultOperationSuccess: "{count} 個のキーを操作しました",
     batchTest: "一括テスト",
     loadGroupsFailed: "グループリストの読み込みに失敗しました",
-    loadSubGroupsFailed: "サブグループの読み込みに失敗しました",
   },
   subGroups: {
     addSubGroup: "サブグループを追加",

@@ -468,7 +468,6 @@ export default {
     testResultOperationSuccess: "Successfully operated on {count} keys",
     batchTest: "Batch Test",
     loadGroupsFailed: "Failed to load group list",
-    loadSubGroupsFailed: "Failed to load sub groups",
   },
   subGroups: {
     addSubGroup: "Add Sub Group",
