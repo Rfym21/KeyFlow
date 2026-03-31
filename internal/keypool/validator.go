@@ -2,10 +2,12 @@ package keypool
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"key-flow/internal/channel"
 	"key-flow/internal/config"
 	"key-flow/internal/encryption"
+	app_errors "key-flow/internal/errors"
 	"key-flow/internal/models"
 	"time"
 
@@ -16,9 +18,10 @@ import (
 
 // KeyTestResult holds the validation result for a single key.
 type KeyTestResult struct {
-	KeyValue string `json:"key_value"`
-	IsValid  bool   `json:"is_valid"`
-	Error    string `json:"error,omitempty"`
+	KeyValue   string `json:"key_value"`
+	IsValid    bool   `json:"is_valid"`
+	Error      string `json:"error,omitempty"`
+	StatusCode int    `json:"status_code"`
 }
 
 // KeyValidator provides methods to validate API keys.
@@ -52,7 +55,7 @@ func NewKeyValidator(params KeyValidatorParams) *KeyValidator {
 
 // ValidateSingleKey performs a validation check on a single API key.
 // isManualTest: 如果为true，测试失败时直接禁用key，不检查黑名单阈值
-func (s *KeyValidator) ValidateSingleKey(key *models.APIKey, group *models.Group, isManualTest bool) (bool, error) {
+func (s *KeyValidator) ValidateSingleKey(key *models.APIKey, group *models.Group, isManualTest bool) (bool, int, error) {
 	if group.EffectiveConfig.AppUrl == "" {
 		group.EffectiveConfig = s.SettingsManager.GetEffectiveConfig(group.Config)
 	}
@@ -61,16 +64,21 @@ func (s *KeyValidator) ValidateSingleKey(key *models.APIKey, group *models.Group
 
 	ch, err := s.channelFactory.GetChannel(group)
 	if err != nil {
-		return false, fmt.Errorf("failed to get channel for group %s: %w", group.Name, err)
+		return false, 0, fmt.Errorf("failed to get channel for group %s: %w", group.Name, err)
 	}
 
 	isValid, validationErr := ch.ValidateKey(ctx, key, group)
 
 	var errorMsg string
+	var statusCode int
 	if !isValid && validationErr != nil {
 		errorMsg = validationErr.Error()
+		var ve *app_errors.ValidationError
+		if errors.As(validationErr, &ve) {
+			statusCode = ve.StatusCode
+		}
 	}
-	s.keypoolProvider.UpdateStatus(key, group, isValid, errorMsg, isManualTest)
+	s.keypoolProvider.UpdateStatus(key, group, isValid, errorMsg, statusCode, isManualTest)
 
 	if !isValid {
 		logrus.WithFields(logrus.Fields{
@@ -78,7 +86,7 @@ func (s *KeyValidator) ValidateSingleKey(key *models.APIKey, group *models.Group
 			"key_id":   key.ID,
 			"group_id": group.ID,
 		}).Debug("Key validation failed")
-		return false, validationErr
+		return false, statusCode, validationErr
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -86,7 +94,7 @@ func (s *KeyValidator) ValidateSingleKey(key *models.APIKey, group *models.Group
 		"is_valid": isValid,
 	}).Debug("Key validation successful")
 
-	return true, nil
+	return true, 0, nil
 }
 
 // TestMultipleKeys performs a synchronous validation for a list of key values within a specific group.
@@ -122,21 +130,22 @@ func (s *KeyValidator) TestMultipleKeys(group *models.Group, keyValues []string)
 		apiKey, exists := existingKeyMap[keyHash]
 		if !exists {
 			results[i] = KeyTestResult{
-				KeyValue: kv,
-				IsValid:  false,
-				Error:    "Key does not exist in this group or has been removed.",
+				KeyValue:   kv,
+				IsValid:    false,
+				Error:      "Key does not exist in this group or has been removed.",
+				StatusCode: 0,
 			}
 			continue
 		}
 
 		apiKey.KeyValue = kv
 
-		isValid, validationErr := s.ValidateSingleKey(&apiKey, group, true) // 手动测试，失败直接禁用
+		isValid, statusCode, validationErr := s.ValidateSingleKey(&apiKey, group, true) // 手动测试，失败直接禁用
 
 		results[i] = KeyTestResult{
-			KeyValue: kv,
-			IsValid:  isValid,
-			Error:    "",
+			KeyValue:   kv,
+			IsValid:    isValid,
+			StatusCode: statusCode,
 		}
 		if validationErr != nil {
 			results[i].Error = validationErr.Error()

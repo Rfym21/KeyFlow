@@ -136,5 +136,5 @@ func (ch *OpenAIChannel) ValidateKey(ctx context.Context, apiKey *models.APIKey,
 	// Use the new parser to extract a clean error message.
 	parsedError := app_errors.ParseUpstreamError(errorBody)
 
-	return false, fmt.Errorf("[status %d] %s", resp.StatusCode, parsedError)
+	return false, &app_errors.ValidationError{StatusCode: resp.StatusCode, Message: parsedError}
 }

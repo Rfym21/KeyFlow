@@ -173,6 +173,10 @@ var MessagesEnUS = map[string]string{
 	"config.key_validation_timeout_desc":        "API request timeout (seconds) when validating a single key in the background.",
 	"config.enable_cache_hit_enhancement":       "Cache Hit Enhancement",
 	"config.enable_cache_hit_enhancement_desc":  "Enable prompt hash-based key routing to direct similar requests to the same key, improving upstream API cache hit rates.",
+	"config.enable_instant_disable":             "Enable Instant Disable",
+	"config.enable_instant_disable_desc":        "Immediately disable a key when a matching error code or keyword is detected, without waiting for the blacklist threshold.",
+	"config.instant_disable_rules":              "Instant Disable Rules",
+	"config.instant_disable_rules_desc":         "One rule per line. status:401 matches HTTP status codes, keyword:invalid_api_key matches error message keywords. Lines starting with # are comments.",
 
 	// Category labels
 	"config.category.basic":   "Basic",

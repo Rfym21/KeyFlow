@@ -7,7 +7,10 @@ import KeyTable from "@/components/keys/KeyTable.vue";
 import SubGroupTable from "@/components/keys/SubGroupTable.vue";
 import type { Group, SubGroupInfo } from "@/types/models";
 import { onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
+
+const { t } = useI18n();
 
 const groups = ref<Group[]>([]);
 const loading = ref(false);
@@ -37,7 +40,7 @@ async function loadGroups() {
     }
   } catch (error) {
     console.error("Failed to load groups:", error);
-    window.$message?.error("加载分组列表失败");
+    window.$message?.error(t("keys.loadGroupsFailed"));
   } finally {
     loading.value = false;
   }
@@ -54,7 +57,7 @@ async function loadSubGroups() {
     subGroups.value = await keysApi.getSubGroups(selectedGroup.value.id);
   } catch (error) {
     console.error("Failed to load sub groups:", error);
-    window.$message?.error("加载子分组失败");
+    window.$message?.error(t("keys.loadSubGroupsFailed"));
     subGroups.value = [];
   } finally {
     loadingSubGroups.value = false;

@@ -173,6 +173,10 @@ var MessagesZhCN = map[string]string{
 	"config.key_validation_timeout_desc":        "后台定时验证单个 Key 时的 API 请求超时时间（秒）。",
 	"config.enable_cache_hit_enhancement":       "增强缓存命中",
 	"config.enable_cache_hit_enhancement_desc":  "启用基于 prompt 哈希的 Key 分配策略，将相似请求路由到同一 Key，提高上游 API 缓存命中率。",
+	"config.enable_instant_disable":             "启用立即禁用",
+	"config.enable_instant_disable_desc":        "检测到匹配的错误码或关键字时，立即禁用对应的 Key，无需等待达到黑名单阈值。",
+	"config.instant_disable_rules":              "立即禁用规则",
+	"config.instant_disable_rules_desc":         "每行一条规则。status:401 表示匹配 HTTP 状态码，keyword:invalid_api_key 表示匹配错误消息关键字。以 # 开头的行为注释。",
 
 	// Category labels
 	"config.category.basic":   "基础参数",

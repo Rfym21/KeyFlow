@@ -124,5 +124,5 @@ func (ch *OpenAIResponseChannel) ValidateKey(ctx context.Context, apiKey *models
 
 	parsedError := app_errors.ParseUpstreamError(errorBody)
 
-	return false, fmt.Errorf("[status %d] %s", resp.StatusCode, parsedError)
+	return false, &app_errors.ValidationError{StatusCode: resp.StatusCode, Message: parsedError}
 }

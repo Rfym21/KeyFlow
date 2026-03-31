@@ -218,9 +218,9 @@ func (p *KeyProvider) getKeyDetails(groupID uint, keyID uint64) (*models.APIKey,
 	return apiKey, nil
 }
 
-// UpdateStatus 异步地提交一个 Key 状态更新任务。
+// UpdateStatus 异步地提交一个 Key 状态更新任务。statusCode 为上游返回的 HTTP 状态码（0 表示未知）。
 // forceDisableOnFailure: 如果为true，失败时直接禁用key，不检查黑名单阈值（用于手动测试）
-func (p *KeyProvider) UpdateStatus(apiKey *models.APIKey, group *models.Group, isSuccess bool, errorMessage string, forceDisableOnFailure bool) {
+func (p *KeyProvider) UpdateStatus(apiKey *models.APIKey, group *models.Group, isSuccess bool, errorMessage string, statusCode int, forceDisableOnFailure bool) {
 	go func() {
 		keyHashKey := fmt.Sprintf("key:%d", apiKey.ID)
 		activeKeysListKey := fmt.Sprintf("group:%d:active_keys", group.ID)
@@ -236,6 +236,17 @@ func (p *KeyProvider) UpdateStatus(apiKey *models.APIKey, group *models.Group, i
 					"error": errorMessage,
 				}).Debug("Uncounted error, skipping failure handling")
 			} else {
+				// 检查是否命中立即禁用规则
+				if !forceDisableOnFailure && group.EffectiveConfig.EnableInstantDisable {
+					rules := app_errors.ParseInstantDisableRules(group.EffectiveConfig.InstantDisableRules)
+					if app_errors.ShouldInstantDisable(rules, statusCode, errorMessage) {
+						forceDisableOnFailure = true
+						logrus.WithFields(logrus.Fields{
+							"keyID":      apiKey.ID,
+							"statusCode": statusCode,
+						}).Warn("Instant disable rule matched, forcing key disable")
+					}
+				}
 				if err := p.handleFailure(apiKey, group, keyHashKey, activeKeysListKey, forceDisableOnFailure); err != nil {
 					logrus.WithFields(logrus.Fields{"keyID": apiKey.ID, "error": err}).Error("Failed to handle key failure")
 				}

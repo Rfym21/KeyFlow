@@ -173,6 +173,10 @@ var MessagesJaJP = map[string]string{
 	"config.key_validation_timeout_desc":        "バックグラウンドで単一キーを検証する際のAPIリクエストタイムアウト（秒）。",
 	"config.enable_cache_hit_enhancement":       "キャッシュヒット強化",
 	"config.enable_cache_hit_enhancement_desc":  "プロンプトハッシュベースのキールーティングを有効にし、類似リクエストを同じキーに振り分けて、上流APIのキャッシュヒット率を向上させます。",
+	"config.enable_instant_disable":             "即時無効化を有効にする",
+	"config.enable_instant_disable_desc":        "一致するエラーコードまたはキーワードが検出された場合、ブラックリスト閾値を待たずにキーを即座に無効化します。",
+	"config.instant_disable_rules":              "即時無効化ルール",
+	"config.instant_disable_rules_desc":         "1行に1ルール。status:401 はHTTPステータスコードに一致、keyword:invalid_api_key はエラーメッセージのキーワードに一致。# で始まる行はコメントです。",
 
 	// Category labels
 	"config.category.basic":   "基本設定",

@@ -236,7 +236,7 @@ func (ps *ProxyServer) executeRequestWithRetry(
 		}
 
 		// 使用解析后的错误信息更新密钥状态
-		ps.keyProvider.UpdateStatus(apiKey, group, false, parsedError, false) // 代理请求，不强制禁用
+		ps.keyProvider.UpdateStatus(apiKey, group, false, parsedError, statusCode, false) // 代理请求，不强制禁用
 
 		// 判断是否为最后一次尝试
 		isLastAttempt := retryCount >= cfg.MaxRetries
@@ -264,7 +264,7 @@ func (ps *ProxyServer) executeRequestWithRetry(
 
 	// 连续错误模式下，请求成功时重置错误计数
 	if group.EffectiveConfig.BlacklistConsecutiveMode {
-		ps.keyProvider.UpdateStatus(apiKey, group, true, "", false)
+		ps.keyProvider.UpdateStatus(apiKey, group, true, "", 0, false)
 	}
 	logrus.Debugf("Request for group %s succeeded on attempt %d with key %s", group.Name, retryCount+1, utils.MaskAPIKey(apiKey.KeyValue))
 

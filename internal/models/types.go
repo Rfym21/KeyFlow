@@ -42,6 +42,8 @@ type GroupConfig struct {
 	RequestBodyLogMode           *string `json:"request_body_log_mode,omitempty"`
 	DisableRequestBodyTruncate   *bool   `json:"disable_request_body_truncate,omitempty"`
 	EnableCacheHitEnhancement    *bool   `json:"enable_cache_hit_enhancement,omitempty"`
+	EnableInstantDisable         *bool   `json:"enable_instant_disable,omitempty"`
+	InstantDisableRules          *string `json:"instant_disable_rules,omitempty"`
 }
 
 // HeaderRule defines a single rule for header manipulation.

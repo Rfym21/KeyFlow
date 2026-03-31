@@ -168,6 +168,7 @@ export const keysApi = {
       key_value: string;
       is_valid: boolean;
       error: string;
+      status_code: number;
     }[];
     total_duration: number;
   }> {

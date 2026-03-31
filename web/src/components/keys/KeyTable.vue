@@ -35,6 +35,7 @@ import { h, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import KeyCreateDialog from "./KeyCreateDialog.vue";
 import KeyDeleteDialog from "./KeyDeleteDialog.vue";
+import KeyTestResultDialog from "./KeyTestResultDialog.vue";
 
 const { t } = useI18n();
 
@@ -103,6 +104,8 @@ const moreOptions = [
   { label: t("keys.validateAllKeys"), key: "validateAll" },
   { label: t("keys.validateValidKeys"), key: "validateActive" },
   { label: t("keys.validateInvalidKeys"), key: "validateInvalid" },
+  { type: "divider" },
+  { label: t("keys.batchTest"), key: "batchTest" },
 ];
 
 let testingMsg: MessageReactive | null = null;
@@ -111,6 +114,11 @@ const isRestoring = ref(false);
 
 const createDialogShow = ref(false);
 const deleteDialogShow = ref(false);
+
+// 测试结果弹窗相关
+const testResultDialogShow = ref(false);
+const testResults = ref<{ key_value: string; is_valid: boolean; error: string; status_code: number }[]>([]);
+const testTotalDuration = ref(0);
 
 // 备注编辑相关
 const notesDialogShow = ref(false);
@@ -228,6 +236,9 @@ function handleMoreAction(key: string) {
     case "clearAll":
       clearAll();
       break;
+    case "batchTest":
+      batchTestKeys();
+      break;
   }
 }
 
@@ -284,23 +295,47 @@ async function testKey(_key: KeyRow) {
 
   try {
     const response = await keysApi.testKeys(props.selectedGroup.id, _key.key_value);
-    const curValid = response.results?.[0] || {};
-    if (curValid.is_valid) {
-      window.$message.success(
-        t("keys.testSuccess", { duration: formatDuration(response.total_duration) })
-      );
-    } else {
-      window.$message.error(curValid.error || t("keys.testFailed"), {
-        keepAliveOnHover: true,
-        duration: 5000,
-        closable: true,
-      });
-    }
+    testResults.value = response.results || [];
+    testTotalDuration.value = response.total_duration;
+    testResultDialogShow.value = true;
     await loadKeys();
     // 触发同步操作刷新
     triggerSyncOperationRefresh(props.selectedGroup.name, "TEST_SINGLE");
   } catch (_error) {
     console.error("Test failed");
+  } finally {
+    testingMsg?.destroy();
+    testingMsg = null;
+  }
+}
+
+/**
+ * 批量测试当前分组所有密钥
+ */
+async function batchTestKeys() {
+  if (!props.selectedGroup?.id || testingMsg) {
+    return;
+  }
+
+  // 获取当前分组所有密钥的 key_value
+  const allKeyValues = keys.value.map((k) => k.key_value).filter(Boolean);
+  if (allKeyValues.length === 0) {
+    return;
+  }
+
+  testingMsg = window.$message.info(t("keys.testingKey"), {
+    duration: 0,
+  });
+
+  try {
+    const response = await keysApi.testKeys(props.selectedGroup.id, allKeyValues.join("\n"));
+    testResults.value = response.results || [];
+    testTotalDuration.value = response.total_duration;
+    testResultDialogShow.value = true;
+    await loadKeys();
+    triggerSyncOperationRefresh(props.selectedGroup.name, "BATCH_TEST");
+  } catch (_error) {
+    console.error("Batch test failed");
   } finally {
     testingMsg?.destroy();
     testingMsg = null;
@@ -1102,6 +1137,15 @@ function toggleSortOrder() {
       :group-id="selectedGroup.id"
       :group-name="getGroupDisplayName(selectedGroup!)"
       @success="handleBatchDeleteSuccess"
+    />
+
+    <key-test-result-dialog
+      v-if="selectedGroup?.id"
+      v-model:show="testResultDialogShow"
+      :results="testResults"
+      :total-duration="testTotalDuration"
+      :group-id="selectedGroup.id"
+      @refresh="loadKeys"
     />
   </div>
 
