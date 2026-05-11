@@ -177,6 +177,8 @@ var MessagesZhCN = map[string]string{
 	"config.enable_instant_disable_desc":        "检测到匹配的错误码或关键字时，立即禁用对应的 Key，无需等待达到黑名单阈值。",
 	"config.instant_disable_rules":              "立即禁用规则",
 	"config.instant_disable_rules_desc":         "每行一条规则。status:401 表示匹配 HTTP 状态码，keyword:invalid_api_key 表示匹配错误消息关键字。以 # 开头的行为注释。",
+	"config.default_key_weight":                 "默认密钥权重",
+	"config.default_key_weight_desc":            "新导入密钥未指定 :weight 后缀时使用的默认权重，同时也是重置权重时使用的值。范围 1-2000000，默认 10000。",
 
 	// Category labels
 	"config.category.basic":   "基础参数",

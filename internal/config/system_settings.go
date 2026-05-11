@@ -288,6 +288,12 @@ func (sm *SystemSettingsManager) ValidateSettings(settingsMap map[string]any) er
 					if intVal < minVal {
 						return fmt.Errorf("value for %s (%d) is below minimum value (%d)", key, intVal, minVal)
 					}
+				} else if strings.HasPrefix(trimmedRule, "max=") {
+					maxValStr := strings.TrimPrefix(trimmedRule, "max=")
+					maxVal, _ := strconv.Atoi(maxValStr)
+					if intVal > maxVal {
+						return fmt.Errorf("value for %s (%d) exceeds maximum value (%d)", key, intVal, maxVal)
+					}
 				}
 			}
 		case reflect.Bool:

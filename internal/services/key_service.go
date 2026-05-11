@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"key-flow/internal/config"
 	"key-flow/internal/encryption"
 	"key-flow/internal/keypool"
 	"key-flow/internal/models"
@@ -16,8 +17,9 @@ import (
 )
 
 const (
-	maxRequestKeys = 5000
-	chunkSize      = 500
+	maxRequestKeys  = 5000
+	chunkSize       = 500
+	maxAllowedKeyWeight = 2000000
 )
 
 // AddKeysResult holds the result of adding multiple keys.
@@ -56,19 +58,21 @@ type KeyWithWeight struct {
 
 // KeyService provides services related to API keys.
 type KeyService struct {
-	DB            *gorm.DB
-	KeyProvider   *keypool.KeyProvider
-	KeyValidator  *keypool.KeyValidator
-	EncryptionSvc encryption.Service
+	DB              *gorm.DB
+	KeyProvider     *keypool.KeyProvider
+	KeyValidator    *keypool.KeyValidator
+	EncryptionSvc   encryption.Service
+	SettingsManager *config.SystemSettingsManager
 }
 
 // NewKeyService creates a new KeyService.
-func NewKeyService(db *gorm.DB, keyProvider *keypool.KeyProvider, keyValidator *keypool.KeyValidator, encryptionSvc encryption.Service) *KeyService {
+func NewKeyService(db *gorm.DB, keyProvider *keypool.KeyProvider, keyValidator *keypool.KeyValidator, encryptionSvc encryption.Service, settingsManager *config.SystemSettingsManager) *KeyService {
 	return &KeyService{
-		DB:            db,
-		KeyProvider:   keyProvider,
-		KeyValidator:  keyValidator,
-		EncryptionSvc: encryptionSvc,
+		DB:              db,
+		KeyProvider:     keyProvider,
+		KeyValidator:    keyValidator,
+		EncryptionSvc:   encryptionSvc,
+		SettingsManager: settingsManager,
 	}
 }
 
@@ -241,13 +245,15 @@ func (s *KeyService) parseKeyWithWeight(input string) *KeyWithWeight {
 		return nil
 	}
 
+	defaultWeight := s.defaultKeyWeight()
+
 	// 检查是否包含权重后缀 (:数字)
 	// 从最后一个冒号开始检查，因为密钥本身可能包含冒号
 	lastColonIdx := strings.LastIndex(input, ":")
 	if lastColonIdx > 0 && lastColonIdx < len(input)-1 {
 		potentialWeight := input[lastColonIdx+1:]
 		weight, err := strconv.Atoi(potentialWeight)
-		if err == nil && weight >= 1 && weight <= 1000 {
+		if err == nil && weight >= 1 && weight <= maxAllowedKeyWeight {
 			key := strings.TrimSpace(input[:lastColonIdx])
 			if s.isValidKeyFormat(key) {
 				return &KeyWithWeight{Key: key, Weight: weight}
@@ -255,12 +261,24 @@ func (s *KeyService) parseKeyWithWeight(input string) *KeyWithWeight {
 		}
 	}
 
-	// 没有权重后缀，使用默认权重 500
+	// 没有有效的权重后缀，使用系统配置的默认权重
 	if s.isValidKeyFormat(input) {
-		return &KeyWithWeight{Key: input, Weight: 500}
+		return &KeyWithWeight{Key: input, Weight: defaultWeight}
 	}
 
 	return nil
+}
+
+// defaultKeyWeight returns the configured default key weight, falling back to 10000 if unavailable.
+func (s *KeyService) defaultKeyWeight() int {
+	if s.SettingsManager == nil {
+		return 10000
+	}
+	w := s.SettingsManager.GetSettings().DefaultKeyWeight
+	if w < 1 || w > maxAllowedKeyWeight {
+		return 10000
+	}
+	return w
 }
 
 // filterValidKeys validates and filters potential API keys

@@ -64,6 +64,18 @@ func (p *KeyProvider) GetStore() store.Store {
 	return p.store
 }
 
+// defaultKeyWeight returns the configured default key weight, falling back to 10000 if unavailable.
+func (p *KeyProvider) defaultKeyWeight() int {
+	if p.settingsManager == nil {
+		return 10000
+	}
+	w := p.settingsManager.GetSettings().DefaultKeyWeight
+	if w < 1 || w > 2000000 {
+		return 10000
+	}
+	return w
+}
+
 // SelectKey 为指定的分组使用加权随机算法选择一个可用的 APIKey。
 func (p *KeyProvider) SelectKey(groupID uint) (*models.APIKey, error) {
 	activeKeysListKey := fmt.Sprintf("group:%d:active_keys", groupID)
@@ -809,8 +821,8 @@ func pluckIDs(keys []models.APIKey) []uint {
 
 // UpdateKeyWeight 更新单个密钥的权重（同时更新base_weight和weight，并清除缓存命中记录）
 func (p *KeyProvider) UpdateKeyWeight(keyID uint, weight int) error {
-	if weight < 1 || weight > 1000 {
-		return fmt.Errorf("weight must be between 1 and 1000")
+	if weight < 1 || weight > 2000000 {
+		return fmt.Errorf("weight must be between 1 and 2000000")
 	}
 
 	return p.executeTransactionWithRetry(func(tx *gorm.DB) error {
@@ -844,8 +856,8 @@ func (p *KeyProvider) UpdateKeyWeight(keyID uint, weight int) error {
 
 // UpdateKeysWeight 批量更新密钥的权重（同时更新base_weight和weight，并清除缓存命中记录）
 func (p *KeyProvider) UpdateKeysWeight(groupID uint, keyHashes []string, weight int) (int64, error) {
-	if weight < 1 || weight > 1000 {
-		return 0, fmt.Errorf("weight must be between 1 and 1000")
+	if weight < 1 || weight > 2000000 {
+		return 0, fmt.Errorf("weight must be between 1 and 2000000")
 	}
 
 	if len(keyHashes) == 0 {
@@ -900,10 +912,10 @@ func (p *KeyProvider) UpdateKeysWeight(groupID uint, keyHashes []string, weight 
 	return updatedCount, err
 }
 
-// ResetKeysWeight resets all keys' weights in a group to the default value (500)
+// ResetKeysWeight resets all keys' weights in a group to the configured default weight.
 // This also resets base_weight and clears cache hit records
 func (p *KeyProvider) ResetKeysWeight(groupID uint) (int64, error) {
-	const defaultWeight = 500
+	defaultWeight := p.defaultKeyWeight()
 	var updatedCount int64
 
 	err := p.executeTransactionWithRetry(func(tx *gorm.DB) error {
@@ -958,7 +970,7 @@ func (p *KeyProvider) ResetSingleKeyWeight(keyID uint) error {
 
 		baseWeight := key.BaseWeight
 		if baseWeight <= 0 {
-			baseWeight = 500
+			baseWeight = p.defaultKeyWeight()
 		}
 
 		// 更新数据库中的weight为base_weight

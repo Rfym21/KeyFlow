@@ -34,6 +34,7 @@ func GenerateSettingsMetadata(s *types.SystemSettings) []models.SystemSettingInf
 		categoryTag := field.Tag.Get("category")
 
 		var minValue *int
+		var maxValue *int
 		var required bool
 
 		rules := strings.Split(validateTag, ",")
@@ -45,6 +46,11 @@ func GenerateSettingsMetadata(s *types.SystemSettings) []models.SystemSettingInf
 				valStr := strings.TrimPrefix(rule, "min=")
 				if val, err := strconv.Atoi(valStr); err == nil {
 					minValue = &val
+				}
+			} else if strings.HasPrefix(rule, "max=") {
+				valStr := strings.TrimPrefix(rule, "max=")
+				if val, err := strconv.Atoi(valStr); err == nil {
+					maxValue = &val
 				}
 			}
 		}
@@ -58,6 +64,7 @@ func GenerateSettingsMetadata(s *types.SystemSettings) []models.SystemSettingInf
 			Description:  descTag,
 			Category:     categoryTag,
 			MinValue:     minValue,
+			MaxValue:     maxValue,
 			Required:     required,
 		}
 		settingsInfo = append(settingsInfo, info)

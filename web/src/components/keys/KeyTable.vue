@@ -1003,7 +1003,7 @@ function toggleSortOrder() {
                 </span>
                 <span class="stat-item weight-stat" :title="t('keys.weightTip')">
                   {{ t("keys.weightShort") }}
-                  <strong>{{ key.weight || 500 }}</strong>
+                  <strong>{{ key.weight || 10000 }}</strong>
                 </span>
                 <span class="stat-item time-stat">
                   {{ key.last_used_at ? formatRelativeTime(key.last_used_at) : t("keys.unused") }}
@@ -1163,7 +1163,7 @@ function toggleSortOrder() {
     <n-input-number
       v-model:value="editingWeight"
       :min="1"
-      :max="1000"
+      :max="2000000"
       :placeholder="t('keys.enterWeight')"
       style="width: 100%"
     />

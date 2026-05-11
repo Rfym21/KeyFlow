@@ -48,6 +48,7 @@ type SystemSettings struct {
 	EnableCacheHitEnhancement         bool   `json:"enable_cache_hit_enhancement" default:"false" name:"config.enable_cache_hit_enhancement" category:"config.category.key" desc:"config.enable_cache_hit_enhancement_desc"`
 	EnableInstantDisable              bool   `json:"enable_instant_disable" default:"false" name:"config.enable_instant_disable" category:"config.category.key" desc:"config.enable_instant_disable_desc"`
 	InstantDisableRules               string `json:"instant_disable_rules" name:"config.instant_disable_rules" category:"config.category.key" desc:"config.instant_disable_rules_desc"`
+	DefaultKeyWeight                  int    `json:"default_key_weight" default:"10000" name:"config.default_key_weight" category:"config.category.key" desc:"config.default_key_weight_desc" validate:"required,min=1,max=2000000"`
 
 	// For cache
 	ProxyKeysMap map[string]struct{} `json:"-"`

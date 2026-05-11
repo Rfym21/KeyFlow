@@ -921,6 +921,13 @@ async function handleSubmit() {
                               size="small"
                             />
                             <n-input
+                              v-else-if="configItem.key === 'instant_disable_rules'"
+                              v-model:value="configItem.value"
+                              type="textarea"
+                              :autosize="{ minRows: 4, maxRows: 12 }"
+                              :placeholder="t('settings.instantDisableRulesPlaceholder')"
+                            />
+                            <n-input
                               v-else
                               v-model:value="configItem.value"
                               :placeholder="t('keys.paramValue')"

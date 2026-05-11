@@ -95,6 +95,20 @@ function generateValidationRules(item: Setting): FormItemRule[] {
       trigger: ["input", "blur"],
     });
   }
+  if (item.type === "int" && item.max_value !== undefined && item.max_value !== null) {
+    rules.push({
+      validator: (_rule: FormItemRule, value: number) => {
+        if (value === null || value === undefined) {
+          return true;
+        }
+        if (item.max_value !== undefined && item.max_value !== null && value > item.max_value) {
+          return new Error(t("settings.maxValueError", { value: item.max_value }));
+        }
+        return true;
+      },
+      trigger: ["input", "blur"],
+    });
+  }
   return rules;
 }
 </script>
@@ -115,7 +129,7 @@ function generateValidationRules(item: Setting): FormItemRule[] {
             <n-grid-item
               v-for="item in category.settings"
               :key="item.key"
-              :span="item.key === 'proxy_keys' ? 3 : 1"
+              :span="item.key === 'proxy_keys' || item.key === 'instant_disable_rules' ? 4 : 1"
             >
               <n-form-item :path="item.key" :rule="generateValidationRules(item)">
                 <template #label>
@@ -140,6 +154,7 @@ function generateValidationRules(item: Setting): FormItemRule[] {
                   :min="
                     item.min_value !== undefined && item.min_value >= 0 ? item.min_value : undefined
                   "
+                  :max="item.max_value !== undefined ? item.max_value : undefined"
                   :placeholder="t('settings.inputNumber')"
                   clearable
                   style="width: 100%"
@@ -154,6 +169,15 @@ function generateValidationRules(item: Setting): FormItemRule[] {
                   v-else-if="item.key === 'proxy_keys'"
                   v-model="form[item.key] as string"
                   :placeholder="t('settings.inputContent')"
+                  size="small"
+                />
+                <n-input
+                  v-else-if="item.key === 'instant_disable_rules'"
+                  v-model:value="form[item.key] as string"
+                  type="textarea"
+                  :autosize="{ minRows: 4, maxRows: 12 }"
+                  :placeholder="t('settings.instantDisableRulesPlaceholder')"
+                  clearable
                   size="small"
                 />
                 <n-input

@@ -6,6 +6,7 @@ export interface Setting {
   value: string | number | boolean;
   type: "int" | "string" | "bool";
   min_value?: number;
+  max_value?: number;
   description: string;
   required: boolean;
 }

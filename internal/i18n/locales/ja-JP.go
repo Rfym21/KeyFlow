@@ -177,6 +177,8 @@ var MessagesJaJP = map[string]string{
 	"config.enable_instant_disable_desc":        "一致するエラーコードまたはキーワードが検出された場合、ブラックリスト閾値を待たずにキーを即座に無効化します。",
 	"config.instant_disable_rules":              "即時無効化ルール",
 	"config.instant_disable_rules_desc":         "1行に1ルール。status:401 はHTTPステータスコードに一致、keyword:invalid_api_key はエラーメッセージのキーワードに一致。# で始まる行はコメントです。",
+	"config.default_key_weight":                 "デフォルトキー重み",
+	"config.default_key_weight_desc":            "新規インポートキーに :weight サフィックスが指定されていない場合に使用されるデフォルト重み。重みリセット時にも使用されます。範囲 1-2000000、デフォルト 10000。",
 
 	// Category labels
 	"config.category.basic":   "基本設定",

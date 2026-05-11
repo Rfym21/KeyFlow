@@ -177,6 +177,8 @@ var MessagesEnUS = map[string]string{
 	"config.enable_instant_disable_desc":        "Immediately disable a key when a matching error code or keyword is detected, without waiting for the blacklist threshold.",
 	"config.instant_disable_rules":              "Instant Disable Rules",
 	"config.instant_disable_rules_desc":         "One rule per line. status:401 matches HTTP status codes, keyword:invalid_api_key matches error message keywords. Lines starting with # are comments.",
+	"config.default_key_weight":                 "Default Key Weight",
+	"config.default_key_weight_desc":            "Default weight applied to newly imported keys without an explicit :weight suffix, also used when resetting weights. Range 1-2000000, default 10000.",
 
 	// Category labels
 	"config.category.basic":   "Basic",

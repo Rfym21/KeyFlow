@@ -211,6 +211,15 @@ function isSubmitDisabled() {
   padding: 10px 15px;
 }
 
+:deep(.n-upload-trigger) {
+  display: block;
+  width: 100%;
+}
+
+:deep(.n-upload-file-list) {
+  margin-top: 12px;
+}
+
 .upload-area {
   display: flex;
   flex-direction: column;

@@ -10,6 +10,7 @@ type SystemSettingInfo struct {
 	Description  string   `json:"description"`
 	Category     string   `json:"category"`
 	MinValue     *int     `json:"min_value,omitempty"`
+	MaxValue     *int     `json:"max_value,omitempty"`
 	Required     bool     `json:"required"`
 }
 

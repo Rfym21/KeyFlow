@@ -558,7 +558,7 @@ func (s *Server) UpdateKeyNotes(c *gin.Context) {
 
 // UpdateKeyWeightRequest defines the payload for updating a key's weight.
 type UpdateKeyWeightRequest struct {
-	Weight int `json:"weight" binding:"required,min=1,max=1000"`
+	Weight int `json:"weight" binding:"required,min=1,max=2000000"`
 }
 
 // UpdateKeyWeight handles updating the weight of a specific API key.
@@ -572,7 +572,7 @@ func (s *Server) UpdateKeyWeight(c *gin.Context) {
 
 	var req UpdateKeyWeightRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrValidation, "weight must be between 1 and 1000"))
+		response.Error(c, app_errors.NewAPIError(app_errors.ErrValidation, "weight must be between 1 and 2000000"))
 		return
 	}
 
@@ -589,7 +589,7 @@ func (s *Server) UpdateKeyWeight(c *gin.Context) {
 type UpdateKeysWeightRequest struct {
 	GroupID  uint   `json:"group_id" binding:"required"`
 	KeysText string `json:"keys_text" binding:"required"`
-	Weight   int    `json:"weight" binding:"required,min=1,max=1000"`
+	Weight   int    `json:"weight" binding:"required,min=1,max=2000000"`
 }
 
 // UpdateKeysWeight handles batch updating the weight of multiple API keys.
